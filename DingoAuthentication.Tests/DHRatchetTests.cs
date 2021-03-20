@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Xunit;
 using DingoAuthentication.Encryption;
+using System.Security.Cryptography;
 
 namespace DingoAuthentication.Tests
 {
@@ -40,6 +41,7 @@ namespace DingoAuthentication.Tests
         [Fact]
         public void SuccessfullyCreateSharedSecret()
         {
+
             IDiffieHellmanRatchet alice = CreateRatchet();
             IDiffieHellmanRatchet bob = CreateRatchet();
 
@@ -117,6 +119,18 @@ namespace DingoAuthentication.Tests
 
             // make sure the new key isnt the same key as before that would be disasterous
             Assert.False(VerifyBytes(alice.PrivateKey, oldSharedSecret));
+
+            Assert.True(aes.TryEncrypt("Hello World", alice.PrivateKey, out encryptedData));
+
+            Assert.True(aes.TryDecrypt(encryptedData, bob.PrivateKey, out decryptedData));
+
+            Assert.Equal("Hello World", decryptedData);
+
+            Assert.True(aes.TryEncrypt("Hello World", alice.PrivateKey, out encryptedData));
+
+            Assert.True(aes.TryDecrypt(encryptedData, bob.PrivateKey, out decryptedData));
+
+            Assert.Equal("Hello World", decryptedData);
         }
 
         [Fact]
@@ -141,7 +155,57 @@ namespace DingoAuthentication.Tests
             Assert.False(VerifyBytes(oldKey, ratchet.PrivateKey));
         }
 
-        private bool VerifyBytes(IEnumerable<byte> first, IEnumerable<byte> second)
+        [Theory]
+        [InlineData(1_000)]
+        public void GeneratingKeysNeverRepeat(int numberOfKeys)
+        {
+            IDiffieHellmanRatchet alice = CreateRatchet();
+            IDiffieHellmanRatchet bob = CreateRatchet();
+
+            // make sure they're not the same person that would be awkward
+            Assert.True(alice.X509IndentityKey != bob.X509IndentityKey);
+
+            // make sure they sucessfully create a secret
+            Assert.True(bob.TryCreateSharedSecret(alice.X509IndentityKey, alice.PublicKey, alice.IdentitySignature));
+
+            Assert.True(alice.TryCreateSharedSecret(bob.X509IndentityKey, bob.PublicKey, bob.IdentitySignature));
+
+            HashSet<string> hashedKeys = new HashSet<string>();
+
+            for (int i = 0; i < numberOfKeys; i++)
+            {
+                if (bob.TryRatchet(out byte[] newKey))
+                {
+                    Assert.True(hashedKeys.Add(Hash(newKey)));
+
+                    // private keys generated should always be 32
+                    Assert.True(newKey.Length == 32);
+                }
+            }
+
+            Assert.True(hashedKeys.Count == numberOfKeys);
+
+            // make sure alice generates all of the same keys
+
+            for (int i = 0; i < numberOfKeys; i++)
+            {
+                if (alice.TryRatchet(out byte[] newKey))
+                {
+                    Assert.False(hashedKeys.Add(Hash(newKey)));
+
+                    // private keys generated should always be 32
+                    Assert.True(newKey.Length == 32);
+                }
+            }
+        }
+
+        private string Hash(byte[] bytes)
+        {
+            byte[] hashed = SHA256.Create().ComputeHash(bytes);
+            return BitConverter.ToString(hashed);
+        }
+
+        public static bool VerifyBytes(IEnumerable<byte> first, IEnumerable<byte> second)
         {
             if (first is null ^ second is null)
             {
