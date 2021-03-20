@@ -1,0 +1,50 @@
+﻿@using DingoDataAccess.Models.Friends
+
+@inject ILogger<DisplayFriends> logger
+@inject IFriendListHandler friendlistHandler
+@inject IFriendHandler friendHandler
+
+<table class="table table-striped border rounded table-hover">
+    <tbody>
+        @foreach (var item in Friends)
+        {
+            <FriendEntry Id=@Id Friend=@item Friends=@Friends StateChangedCallback=@StateChangedCallback />
+        }
+    </tbody>
+</table>
+
+@code {
+    [Parameter]
+    public string Id { get; set; }
+
+    private List<IFriendModel> Friends { get; set; } = new();
+
+    protected override async Task OnParametersSetAsync()
+    {
+
+        await base.OnParametersSetAsync();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await GetFriends();
+
+        await base.OnInitializedAsync();
+
+        logger.LogInformation("Initialized Component {ComponentName} Params: {Param1}:{Param1Value}", nameof(DisplayFriends), nameof(Id), Id);
+    }
+
+    private async Task GetFriends()
+    {
+        logger.LogInformation("Fetching friends list for {Id}", Id);
+
+        Friends = await friendHandler.GetFriendList(Id);
+
+        logger.LogInformation("Found friends list for {Id} {Count}", Id, Friends.Count);
+    }
+
+    private void StateChangedCallback()
+    {
+        StateHasChanged();
+    }
+}

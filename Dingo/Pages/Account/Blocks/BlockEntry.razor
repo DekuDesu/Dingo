@@ -1,0 +1,87 @@
+﻿@using DingoDataAccess.Models.Friends
+@inject ILogger<BlockEntry> logger
+@inject IFriendListHandler friendlistHandler
+@inject IFriendHandler friendHandler
+
+<tr scope="row">
+    <td class="col-lg-1 col-md-2 col-sm-3 col-2 align-middle" style="text-align: center;">
+        <span class="oi oi-ban"></span>
+    </td>
+    <td class="col-lg-11 col-md-10 col-sm-9 col-10 align-middle">
+        <div class="row">
+            <div class="col">
+                @Blocked.DisplayName#@Blocked.UniqueIdentifier.ToString()
+            </div>
+            <button class=@ButtonStyle @onclick=@Unblock>
+                @if (ShowSpinner)
+                {
+                    <div class="spinner-border text-success" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                }
+                else
+                {
+                    @ButtonText
+                }
+            </button>
+        </div>
+    </td>
+</tr>
+
+@code {
+    [Parameter]
+    public string Id { get; set; }
+
+    [Parameter]
+    public IFriendModel Blocked { get; set; }
+
+    [Parameter]
+    public List<IFriendModel> BlockedPeople { get; set; }
+
+    private string ButtonText = "Unblock";
+
+    private string ButtonStyle = styleBlocked;
+
+    private bool ShowSpinner = false;
+
+    private bool blocked = true;
+
+    private bool blockInput = false;
+
+    private const string styleBlocked = "col-3 btn btn-warning align-middle mx-2 p-1";
+    private const string styleUnblocked = "col-3 btn btn-primary align-middle mx-2 p-1";
+
+    private Task Wait()
+    {
+        return Task.Run(() => System.Threading.Thread.Sleep(400));
+    }
+
+    private async Task Unblock()
+    {
+        if (blockInput)
+        {
+            return;
+        }
+        blockInput = true;
+        ShowSpinner = true;
+
+        if (blocked)
+        {
+            await friendHandler.UnblockFriend(Id, Blocked.Id);
+            ButtonText = "Block";
+            ButtonStyle = styleUnblocked;
+        }
+        else
+        {
+            await friendHandler.BlockFriend(Id, Blocked.Id);
+            ButtonText = "Unblock";
+            ButtonStyle = styleBlocked;
+        }
+
+        await Wait();
+
+        blocked = !blocked;
+        ShowSpinner = false;
+        blockInput = false;
+    }
+}

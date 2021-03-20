@@ -1,0 +1,22 @@
+﻿@page "/message"
+
+@using Dingo.Data.GeneralModels
+
+@inject ILogger<Message> logger
+
+<h1>Friend Finder</h1>
+
+<EditForm @bind-model="searchTerm">
+    <h4>Find a Friend</h4>
+    <input @bind-value="searchTerm.Term" />
+    <button class="btn btn-outline-primary" @onclick="SubmitSearch">Search</button>
+</EditForm>
+
+@code {
+    private SingleSearchTermModel searchTerm = new();
+    private void SubmitSearch()
+    {
+        logger.LogInformation("Searched for Friend: {FriendUserName}", searchTerm.Term);
+
+    }
+}

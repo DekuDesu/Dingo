@@ -1,0 +1,30 @@
+﻿@using Dingo.Data.GeneralModels
+
+@inject ILogger<Toasts> logger
+
+<div class="toast-container position-absolute top-0 end-0 p-3">
+    @foreach (var item in toasts)
+    {
+        <Toast @key="item" toast=@item StateHasChangedCallback=@StateHasChangedCallback />
+    }
+</div>
+
+@code {
+    [Parameter]
+    public List<ToastModel> toasts { get; set; }
+
+    [CascadingParameter]
+    protected Action TopLevelStateChanged { get; set; }
+
+    private void StateHasChangedCallback()
+    {
+        for (int i = 0; i < toasts.Count; i++)
+        {
+            if (toasts[i].Remove)
+            {
+                toasts.Remove(toasts[i]);
+            }
+        }
+        TopLevelStateChanged?.Invoke();
+    }
+}

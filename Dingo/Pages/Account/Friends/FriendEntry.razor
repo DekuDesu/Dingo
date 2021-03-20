@@ -1,0 +1,206 @@
+﻿
+@inject ILogger<FriendEntry> logger
+@inject IFriendHandler friendHandler
+@using DingoDataAccess.Models.Friends
+@using Dingo.Data.GeneralModels
+@using DingoDataAccess.Enums
+@implements IDisposable
+
+<tr scope="row">
+    <td class="col-lg-1 col-md-2 col-sm-3 col-2 align-middle">
+        <img src=@Friend.AvatarPath class="img-fluid rounded-circle" />
+
+    </td>
+    <td class="col-lg-11 col-md-10 col-sm-9 col-10 align-middle">
+        <div class="row">
+            <h4>
+                <span class="oi oi-media-record" title="media record" aria-hidden="true" style=@GetColor()></span>
+                <span style="color: black; font-weight:bold; font-size: large;">
+                    @(Friend?.DisplayName ?? "Loading")
+                    <span style="color: grey; font-size: 1em;">
+                        #@(Friend?.UniqueIdentifier.ToString() ?? "")
+                    </span>
+                </span>
+            </h4>
+        </div>
+        <div class="row" style="text-align: left;">
+            <div class="col">
+                <small>@GetStatusName()</small>
+                <button class="btn btn-outline-primary mx-4">
+                    <span class="oi oi-chat" title="chat" aria-hidden="true"></span>
+                </button>
+            </div>
+            <div class="dropdown col-3 mx-2 end-0" style="text-align: right;">
+                <a class="btn btn-primary dropdown-toggle" role="button" id="dropdownMenuLink" aria-expanded="false" @onclick=@ToggleShowDropdown>
+                    <span class="oi oi-cog" title="cog" aria-hidden="true"></span>
+                </a>
+
+                <ul class=@DropDownStyle aria-labelledby="dropdownMenuLink">
+                    <li><a class="dropdown-item" @onclick=@RemoveWithModal>Remove</a></li>
+                    <li><a class="dropdown-item" @onclick=@ReportWithModal>Report</a></li>
+                </ul>
+            </div>
+        </div>
+    </td>
+</tr>
+@if (ShowRemoveModal)
+{
+    <Dingo.Pages.Components.Modal Title=@RemoveModalTitle Content=@RemoveModalContent SubmitText="Yes" CancelText="No" CancelCallback=@ModalCancel SubmitCallback=@Remove></Dingo.Pages.Components.Modal>
+}
+@if (ShowReportModal)
+{
+    <Dingo.Pages.Components.Modal Title=@ReportModalTitle Content=@ReportModalContent SubmitText="Report" CancelText="Cancel" CancelCallback=@ModalCancel SubmitCallback=@Report></Dingo.Pages.Components.Modal>
+}
+@code {
+    [CascadingParameter]
+    protected List<ToastModel> toasts { get; set; }
+
+    [CascadingParameter]
+    protected Action toastCallback { get; set; }
+
+    [Parameter]
+    public string Id { get; set; }
+
+    [Parameter]
+    public IFriendModel Friend { get; set; }
+
+    [Parameter]
+    public List<IFriendModel> Friends { get; set; }
+
+    [Parameter]
+    public Action StateChangedCallback { get; set; }
+
+    private bool ShowRemoveModal = false;
+    private bool ShowReportModal = false;
+
+    private bool ShowSettings = false;
+
+    private void ToggleShowSettings() => ShowSettings = !ShowSettings;
+
+    private void ToggleShowDropdown() => ShowDropDown = !ShowDropDown;
+
+    private string DropDownStyle => ShowDropDown ? "dropdown-menu show end-0" : "dropdown-menu";
+
+    private bool ShowDropDown = false;
+
+    private bool blockInput = false;
+
+    private string ReportModalTitle => $"Report {Friend.DisplayName}#{Friend.UniqueIdentifier}?";
+    private string ReportModalContent => $"This will notify Dingo that this person should be investigated for bad behaviour. Your messages are always forgotten by Dingo, we will not be able to investigate past messages.";
+
+    private string RemoveModalTitle => $"Remove {Friend.DisplayName}#{Friend.UniqueIdentifier}?";
+    private string RemoveModalContent => $"Are you sure you want to remove them from your friends list?";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+
+        logger.LogInformation("Initialized Component {ComponentName} Params: {Param1}:{Param1Value} {Param2}:{Param2Value} {Param3}:{Param3Value} {Param4}:{Param4Value}", nameof(FriendEntry), nameof(Id), Id, nameof(Friend), Friend, nameof(toasts), toasts, nameof(toastCallback), toastCallback);
+    }
+
+    private string GetStatusName()
+    {
+        return Friend.VirtualStatus switch
+        {
+            OnlineStatus.Offline => "Offline",
+            OnlineStatus.Online => "Online",
+            OnlineStatus.Busy => "Busy",
+            OnlineStatus.Invisible => "Offline",
+            OnlineStatus.LookingToChat => "Looking To Chat",
+            OnlineStatus.DoNotDisturb => "Do Not Disturb",
+            _ => "Offline"
+        };
+    }
+
+    private string GetColor()
+    {
+        return Friend.VirtualStatus switch
+        {
+            OnlineStatus.Offline => "color: grey;",
+            OnlineStatus.Online => "color: green;",
+            OnlineStatus.Busy => "color: orange;",
+            OnlineStatus.Invisible => "color: grey;",
+            OnlineStatus.LookingToChat => "color: blue;",
+            OnlineStatus.DoNotDisturb => "color: red;",
+            _ => "color: grey;"
+        };
+    }
+
+    private Task Wait()
+    {
+        return Task.Run(() => System.Threading.Thread.Sleep(100));
+    }
+
+    private void RemoveWithModal()
+    {
+        ShowRemoveModal = true;
+
+        ToggleShowDropdown();
+    }
+
+    private void ReportWithModal()
+    {
+        ShowReportModal = true;
+
+        ToggleShowDropdown();
+    }
+
+    private async Task ModalCancel()
+    {
+        ShowRemoveModal = false;
+
+        ShowReportModal = false;
+
+        await Wait();
+
+        logger.LogInformation("Cancelling");
+
+        blockInput = false;
+    }
+
+    private async Task Report()
+    {
+        if (blockInput)
+        {
+            return;
+        }
+        blockInput = true;
+        logger.LogInformation("Report");
+        await Wait();
+        toasts.Add(new()
+        {
+            Title = "Report Submitted",
+            Content = "Your report has successfully been submitted! Thank you for keeping our community safe!",
+            TimeSent = DateTime.UtcNow
+        });
+        toastCallback?.Invoke();
+        logger.LogInformation("Toasts: {ToastCount}", toasts.Count);
+        blockInput = false;
+    }
+
+    private async Task Remove()
+    {
+        if (blockInput)
+        {
+            return;
+        }
+        blockInput = true;
+
+        await friendHandler.RemoveFriend(Id, Friend.Id);
+
+        await friendHandler.RemoveFriend(Friend.Id, Id);
+
+        Friends.Remove(Friend);
+
+        ShowRemoveModal = false;
+
+        StateChangedCallback?.Invoke();
+
+        blockInput = false;
+    }
+
+    public void Dispose()
+    {
+        logger.LogInformation("Disposed friend entry");
+    }
+}

@@ -1,0 +1,71 @@
+﻿<div class=@ModelClass id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true" style=@ModalStyle>
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="exampleModalLabel">@Title</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" @onclick=@Cancel></button>
+            </div>
+            <div class="modal-body">
+                @Content
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" @onclick=@Cancel>@CancelText</button>
+                <button type="button" class="btn btn-primary" @onclick=@Submit>@SubmitText</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public string Title { get; set; } = "Confirm";
+    [Parameter]
+    public string Content { get; set; } = "Are you sure?";
+    [Parameter]
+    public string CancelText { get; set; } = "Cancel";
+    [Parameter]
+    public string SubmitText { get; set; } = "Continue";
+
+    [Parameter]
+    public Func<Task> SubmitCallback { get; set; }
+
+    [Parameter]
+    public Func<Task> CancelCallback { get; set; }
+
+    private string ModelClass => ShowModal ? "modal fade show" : "modal fade";
+    private string ModalStyle => ShowModal ? "display: unset;" : "display: none;";
+
+    private bool ShowModal = true;
+
+    private bool blockInput = false;
+
+    private async Task Cancel()
+    {
+        if (blockInput)
+        {
+            return;
+        }
+        blockInput = true;
+
+        await CancelCallback?.Invoke();
+
+        ShowModal = false;
+
+        blockInput = false;
+    }
+
+    private async Task Submit()
+    {
+        if (blockInput)
+        {
+            return;
+        }
+        blockInput = true;
+
+        await SubmitCallback?.Invoke();
+
+        ShowModal = false;
+
+        blockInput = false;
+    }
+}

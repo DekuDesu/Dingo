@@ -1,0 +1,110 @@
+﻿@using System.Diagnostics
+@using System.Timers
+
+@using DingoDataAccess.Models.Friends
+@using DingoDataAccess.Enums
+
+@inject ILogger<NavMenu> logger
+@implements IDisposable
+@inject IStatusHandler statusHandler
+
+<div class="top-row pl-4 navbar navbar-dark">
+    <a class="navbar-brand mx-4" href="">
+        <img src="/Images/Dingo256.png" class="" height="50" width="50" /> Dingo
+    </a>
+    <button class="navbar-toggler" @onclick="ToggleNavMenu">
+        <span class="navbar-toggler-icon"></span>
+    </button>
+</div>
+
+<style>
+    .dropdown-item {
+        color: black;
+    }
+</style>
+
+<div class="@NavMenuCssClass">
+    <ul class="nav flex-column">
+        <AuthorizeView>
+            <NotAuthorized>
+                <li class="nav-item px-3">
+                    <a href="Identity/Account/Login" class="btn btn-primary">
+                        <span class="oi oi-account-login" title="account login" aria-hidden="true"></span>
+                        Login
+                    </a>
+                </li>
+            </NotAuthorized>
+            <Authorized>
+                <li class="nav-item px-3 my-2" style="text-align: center;">
+                    <div class="row">
+                        <img class="col-4 rounded-circle w-50 h-50 mx-auto d-block" src="/Images/DefaultAvatar.png" />
+                    </div>
+                    <div class="row">
+                        <div class="text-wrap" style="max-width: 250px; color: white; font-weight:bold; font-size: large;">
+                            @(DisplayName ?? "Loading")
+                            <span style="color: grey; font-size: 1em;">
+                                #@(MyFriendInfo?.UniqueIdentifier.ToString() ?? "Loading")
+                            </span>
+                        </div>
+                    </div>
+                    <div class="row my-2" style="color: white;">
+                        <div class="col">
+                            <a href="/Identity/Account/Logout" title="Logout" style="text-decoration: none;">
+                                <span class="oi oi-account-logout mx-auto" aria-hidden="true"></span>
+                            </a>
+                        </div>
+                        <div class="col">
+                            <a href="/Identity/Account/Manage" title="Manage Account" style="text-decoration: none;">
+                                <span class="oi oi-cog mx-auto" aria-hidden="true"></span>
+                            </a>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <Dingo.Pages.Account.StatusDropDown />
+                    </div>
+                </li>
+                <li class="nav-item px-3">
+                    <div class="w-100" style="color: white; font-weight: bold; font-size: large;">
+                        Messages
+                    </div>
+                </li>
+                <Dingo.Pages.Messaging.NavMessages />
+            </Authorized>
+
+        </AuthorizeView>
+    </ul>
+</div>
+
+@code {
+    [CascadingParameter(Name = "Id")]
+    public string Id { get; set; }
+
+    [CascadingParameter(Name = "DisplayName")]
+    public string DisplayName { get; set; }
+
+    [CascadingParameter(Name = "MyFriendInfo")]
+    public IFriendModel MyFriendInfo { get; set; }
+
+    private bool collapseNavMenu = true;
+
+    private string NavMenuCssClass => collapseNavMenu ? "collapse" : null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+
+        logger.LogInformation("Initialized Component {ComponentName} Params: {Param1}:{Param1Value} {Param2}:{Param2Value} {Param3}:{Param3Value}", nameof(NavMenu), nameof(Id), Id, nameof(DisplayName), DisplayName, nameof(MyFriendInfo), MyFriendInfo);
+    }
+
+    private void ToggleNavMenu()
+    {
+        collapseNavMenu = !collapseNavMenu;
+    }
+
+    public void Dispose()
+    {
+        // make it so when the user closes the tab and the nav menu is disposed log them out
+        statusHandler.SetVirtualStatus(Id, OnlineStatus.Offline);
+        statusHandler.SetStatus(Id, OnlineStatus.Offline);
+    }
+}

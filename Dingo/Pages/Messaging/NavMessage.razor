@@ -1,0 +1,28 @@
+﻿@using DingoDataAccess.Models.Friends
+
+<li class="nav-item px-3">
+    <div class="btn btn-primary w-100">
+        <div class="position-relative w-100">
+            <div class="text-wrap" style="max-width: 250px; color: white; font-weight: 500;">
+                @(Friend?.DisplayName ?? "Loading")
+                <span style="color: grey; font-size: 1em;">
+                    #@(Friend?.UniqueIdentifier.ToString() ?? "Loading")
+                </span>
+            </div>
+            @if (UnreadMessage)
+            {
+                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"><span class="oi oi-chat" title="Chat"></span><span class="visually-hidden">unread messages</span></span>
+            }
+        </div>
+    </div>
+</li>
+
+@code {
+    // this is a message component to display in the nav bar
+
+    // the friend info to display for 'who the message is from'
+    [Parameter]
+    public IFriendModel Friend { get; set; }
+
+    private bool UnreadMessage = false;
+}

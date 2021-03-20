@@ -1,0 +1,50 @@
+﻿@page "/"
+
+@inject IDisplayNameHandler nameHandler
+
+@inject ILogger<Index> logger
+
+@using Dingo.Data.GeneralModels
+
+@code{
+    // We should load the user ID and username since it's used by components
+    [CascadingParameter(Name = "DisplayName")]
+    public string DisplayName { get; set; }
+
+    [CascadingParameter(Name = "Id")]
+    public string Id { get; set; }
+
+    public List<ToastModel> toasts = new();
+
+    public void ToastStateChange()
+    {
+        logger.LogInformation("Top level toast state change invoked");
+        StateHasChanged();
+    }
+
+    [CascadingParameter]
+    protected Task<AuthenticationState>
+            AuthStat
+    { get; set; }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await base.OnParametersSetAsync();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+    }
+}
+
+<AuthorizeView>
+    <CascadingValue Value=@toasts>
+        <CascadingValue Value=@ToastStateChange TValue=Action>
+            <div class="col-lg-6 col-md-10 col-xs-12">
+                <Dingo.Pages.Account.ManageFriends Id=@Id />
+            </div>
+            <Dingo.Pages.Components.Toasts toasts=@toasts />
+        </CascadingValue>
+    </CascadingValue>
+</AuthorizeView>

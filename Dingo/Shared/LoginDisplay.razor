@@ -1,0 +1,30 @@
+﻿@using DingoDataAccess.Account
+
+@inject IDisplayNameHandler nameChanger
+
+@code{
+    [CascadingParameter]
+    protected Task<AuthenticationState> AuthStat { get; set; }
+
+    private string DisplayName { get; set; }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (AuthStat != null)
+        {
+            var auth = await AuthStat;
+            DisplayName = await nameChanger.GetDisplayName(auth?.User?.Claims?.FirstOrDefault()?.Value) ?? "";
+        }
+    }
+}
+
+<AuthorizeView>
+    <Authorized>
+        <a href="Identity/Account/Manage" style="font-weight: bolder">@DisplayName</a>
+        <a href="Identity/Account/LogOut">Log out</a>
+    </Authorized>
+    <NotAuthorized>
+        <a href="Identity/Account/Register">Create New Account</a>
+        <a href="Identity/Account/Login">Log in</a>
+    </NotAuthorized>
+</AuthorizeView>

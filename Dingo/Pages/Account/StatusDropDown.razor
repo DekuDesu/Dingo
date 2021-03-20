@@ -1,0 +1,113 @@
+﻿@using DingoDataAccess.Models.Friends
+@using DingoDataAccess.Enums
+
+@inject ILogger<StatusDropDown> logger
+@inject IStatusHandler statusHandler
+
+<div class="btn-group">
+    <style>
+        .dropdown-item {
+            color: black;
+        }
+    </style>
+    <button type="button" class=@OnlineStatusClass>
+        @OnlineStatusText
+    </button>
+    <button type="button" class="btn btn-primary dropdown-toggle dropdown-toggle-split" @onclick=@ToggleDropdown aria-expanded="false">
+        <span class="visually-hidden">Toggle Dropdown</span>
+    </button>
+    <ul class=@DropDownClass style="color: black;">
+        <li><span class="dropdown-item" @onclick=@(e=>UpdateStatus(OnlineStatus.Online))>Online</span></li>
+        <li><span class="dropdown-item" @onclick=@(e=>UpdateStatus(OnlineStatus.Busy))>Busy</span></li>
+        <li><span class="dropdown-item" @onclick=@(e=>UpdateStatus(OnlineStatus.LookingToChat))>Looking To Chat</span></li>
+        <li><span class="dropdown-item" @onclick=@(e=>UpdateStatus(OnlineStatus.DoNotDisturb))>Do Not Disturb</span></li>
+        <li><hr class="dropdown-divider"></li>
+        <li><span class="dropdown-item" @onclick=@(e=>UpdateStatus(OnlineStatus.Invisible))>Invisible</span></li>
+    </ul>
+</div>
+
+@code {
+    [CascadingParameter(Name = "Id")]
+    public string Id { get; set; }
+
+    private bool ShowOnlineStatusDropDown = false;
+
+    private string DropDownClass => ShowOnlineStatusDropDown ? "dropdown-menu show" : "dropdown-menu";
+
+    private OnlineStatus Status = OnlineStatus.Offline;
+
+    private string OnlineStatusText => Status switch
+    {
+        OnlineStatus.Busy => "Busy",
+        OnlineStatus.DoNotDisturb => "Do Not Disturb",
+        OnlineStatus.Invisible => "Invisible",
+        OnlineStatus.LookingToChat => "Looking to Chat",
+        _ => "Online"
+    };
+
+    private string OnlineStatusClass => Status switch
+    {
+        OnlineStatus.Busy => "btn btn-warning",
+        OnlineStatus.DoNotDisturb => "btn btn-danger",
+        OnlineStatus.Invisible => "btn btn-secondary",
+        OnlineStatus.LookingToChat => "btn btn-primary",
+        _ => "btn btn-success"
+    };
+
+    private Task Wait()
+    {
+        return Task.Run(() => System.Threading.Thread.Sleep(100));
+    }
+
+    private async Task UpdateStatus(OnlineStatus status)
+    {
+        Status = status;
+        ShowOnlineStatusDropDown = false;
+        await SetStatuses(status);
+        await Wait();
+    }
+
+    private async Task SetStatuses(OnlineStatus status)
+    {
+        await statusHandler.SetVirtualStatus(Id, status);
+        await statusHandler.SetLastVirtualStatus(Id, status);
+    }
+
+    private void ToggleDropdown()
+    {
+        ShowOnlineStatusDropDown = !ShowOnlineStatusDropDown;
+    }
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+
+        // update the status box to reflect our online status
+        await UpdateOnlineStatus();
+    }
+
+    private async Task UpdateOnlineStatus()
+    {
+        // update our status box, get the last status we set before our last logout
+        var result = await statusHandler.TryGetLastVirtualStatus(Id);
+
+        // if we successfully got the status set the UI to match
+        if (result.result)
+        {
+            // if we got offline, there's something wrong, set to online
+            if (result.status != OnlineStatus.Offline)
+            {
+                Status = result.status;
+            }
+            else
+            {
+                Status = OnlineStatus.Online;
+            }
+        }
+
+        // update our status to show other people
+        await statusHandler.SetVirtualStatus(Id, result.status);
+    }
+
+}

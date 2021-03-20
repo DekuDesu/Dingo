@@ -1,0 +1,186 @@
+﻿@inject IFriendHandler friendHandler
+@inject ILogger<RequestEntry> logger
+
+@using DingoDataAccess.Models.Friends
+
+<tr scope="row">
+    <td class="col-lg-1 col-md-2 col-sm-3 col-2 align-middle">
+        <img src=@friend.AvatarPath class="img-fluid rounded-circle" />
+    </td>
+    <td class="col-lg-6 col-md-5 col-sm-4 col-5 align-middle">
+        <div class="row h4">
+            @friend.DisplayName#@friend.UniqueIdentifier.ToString()
+        </div>
+        <div class="row">
+            @friend.Status.ToString()
+        </div>
+    </td>
+    <td class="col-lg-5 col-md-5 col-sm-5 col-5 align-middle">
+        <div class="row align-middle">
+            <div class="col-sm-4" style="text-align: center;">
+                @if (ShowSpinner == 0)
+                {
+                    <div class="spinner-border text-success my-2" role="status">
+                        <span class="visually-hidden">Adding...</span>
+                    </div>
+                }
+                else
+                {
+                    <button class="btn btn-link rounded-circle row oi oi-circle-check text-decoration-none" title="circle check" aria-hidden="true" style=@AcceptStyle @onclick=@AcceptRequest />
+                }
+            </div>
+            <div class="col-sm-4" style="text-align: center;">
+                @if (ShowSpinner == 1)
+                {
+                    <div class="spinner-border text-secondary my-2" role="status">
+                        <span class="visually-hidden">Ignoring...</span>
+                    </div>
+                }
+                else
+                {
+                    <button class="btn btn-link rounded-circle row oi oi-circle-x text-decoration-none" title="circle check" aria-hidden="true" style=@IgnoreStyle @onclick=@IgnoreRequest />
+                }
+            </div>
+            <div class="col-sm-4" style="text-align: center;">
+                @if (ShowSpinner == 2)
+                {
+                    <div class="spinner-border text-danger my-2" role="status">
+                        <span class="visually-hidden">Blocking...</span>
+                    </div>
+                }
+                else
+                {
+                    <button class="btn btn-link rounded-circle row oi oi-ban text-decoration-none" title="circle check" aria-hidden="true" style=@BlockStyle @onclick=@BlockRequest />
+                }
+            </div>
+        </div>
+        <div class="row align-middle">
+            <div class="col-sm-4" style="text-align: center;">
+                Accept
+            </div>
+            <div class="col-sm-4" style="text-align: center;">
+                Ignore
+            </div>
+            <div class="col-sm-4" style="text-align: center;">
+                Block
+            </div>
+        </div>
+    </td>
+</tr>
+
+@code {
+    [Parameter]
+    public string Id { get; set; }
+
+    [Parameter]
+    public IFriendModel friend { get; set; }
+
+    [Parameter]
+    public List<IFriendModel> Requests { get; set; }
+
+    [Parameter]
+    public Action StateHasChangedCallback { get; set; }
+
+    private string IconSize = "font-size: xx-large;";
+
+    private string AcceptStyle => IconSize + "color: green;";
+
+    private string IgnoreStyle => IconSize + "color: black;";
+
+    private string BlockStyle => IconSize + "color: red;";
+
+    private bool BlockInput = false;
+
+    private int ShowSpinner = -1;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+
+        logger.LogInformation("Initialized Component {ComponentName} Params: {Param1}:{Param1Value} {Param2}:{Param2Value} {Param3}:{Param3Value}", nameof(RequestEntry), nameof(Id), Id, nameof(friend), friend, nameof(Requests), Requests);
+    }
+
+    private Task Wait()
+    {
+        return Task.Run(() => System.Threading.Thread.Sleep(500));
+    }
+
+    private async Task AcceptRequest()
+    {
+        if (BlockInput)
+        {
+            return;
+        }
+        BlockInput = true;
+        ShowSpinner = 0;
+
+        await Wait();
+
+        // add the other person to our friendslist
+        await friendHandler.AddFriend(Id, friend.Id);
+
+        // add us to their friends list
+        await friendHandler.AddFriend(friend.Id, Id);
+
+        // remove them from our request list
+        await friendHandler.RemoveRequest(Id, friend.Id);
+
+        // remove them from the list
+        Requests.Remove(friend);
+
+        ShowSpinner = -1;
+        BlockInput = false;
+
+        // notify our parent component that we have changed and it should re-draw the request list
+        StateHasChangedCallback?.Invoke();
+    }
+
+    private async Task IgnoreRequest()
+    {
+        if (BlockInput)
+        {
+            return;
+        }
+        BlockInput = true;
+        ShowSpinner = 1;
+
+        await Wait();
+
+        // remove them from our request list
+        await friendHandler.RemoveRequest(Id, friend.Id);
+
+        // remove them from the list
+        Requests.Remove(friend);
+
+        ShowSpinner = -1;
+        BlockInput = false;
+
+        // notify our parent component that we have changed and it should re-draw the request list
+        StateHasChangedCallback?.Invoke();
+    }
+    private async Task BlockRequest()
+    {
+        if (BlockInput)
+        {
+            return;
+        }
+        BlockInput = true;
+        ShowSpinner = 2;
+
+        await Wait();
+
+        await friendHandler.BlockFriend(Id, friend.Id);
+
+        // remove them from our request list
+        await friendHandler.RemoveRequest(Id, friend.Id);
+
+        // remove them from the list
+        Requests.Remove(friend);
+
+        ShowSpinner = -1;
+        BlockInput = false;
+
+        // notify our parent component that we have changed and it should re-draw the request list
+        StateHasChangedCallback?.Invoke();
+    }
+}

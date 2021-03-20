@@ -1,0 +1,66 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.31019.35
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{EE47E75C-AAB9-474D-ACBB-73E69E8BD3DA}"
+	ProjectSection(SolutionItems) = preProject
+		HotReload.bat = HotReload.bat
+	EndProjectSection
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Dingo", "Dingo\Dingo.csproj", "{4A6B8995-FE9D-4E95-8273-9E5F583E3630}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DingoAPI", "DingoAPI\DingoAPI.csproj", "{A52B526F-9AED-450F-9466-7C6064473359}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DingoAuthentication", "DingoAuthentication\DingoAuthentication.csproj", "{17BDB377-F119-4DE2-86FC-E4AAC17B6318}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DingoAuthentication.Tests", "DingoAuthentication.Tests\DingoAuthentication.Tests.csproj", "{063CF8E3-B6BB-4BA3-B49B-A09FAD130A49}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DingoClient", "DingoClient\DingoClient.csproj", "{217FBB1E-8470-468D-9EB7-A6EB46705DFC}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DingoDataAccess", "DingoDataAccess\DingoDataAccess.csproj", "{F52C2971-A700-4C4F-B05B-783108197363}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DingoDataAccess.Tests", "DingoDataAccess.Tests\DingoDataAccess.Tests.csproj", "{24D508A3-1565-4604-AAE3-EF7B133B24E6}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{4A6B8995-FE9D-4E95-8273-9E5F583E3630}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4A6B8995-FE9D-4E95-8273-9E5F583E3630}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4A6B8995-FE9D-4E95-8273-9E5F583E3630}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4A6B8995-FE9D-4E95-8273-9E5F583E3630}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A52B526F-9AED-450F-9466-7C6064473359}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A52B526F-9AED-450F-9466-7C6064473359}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A52B526F-9AED-450F-9466-7C6064473359}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A52B526F-9AED-450F-9466-7C6064473359}.Release|Any CPU.Build.0 = Release|Any CPU
+		{17BDB377-F119-4DE2-86FC-E4AAC17B6318}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{17BDB377-F119-4DE2-86FC-E4AAC17B6318}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{17BDB377-F119-4DE2-86FC-E4AAC17B6318}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{17BDB377-F119-4DE2-86FC-E4AAC17B6318}.Release|Any CPU.Build.0 = Release|Any CPU
+		{063CF8E3-B6BB-4BA3-B49B-A09FAD130A49}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{063CF8E3-B6BB-4BA3-B49B-A09FAD130A49}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{063CF8E3-B6BB-4BA3-B49B-A09FAD130A49}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{063CF8E3-B6BB-4BA3-B49B-A09FAD130A49}.Release|Any CPU.Build.0 = Release|Any CPU
+		{217FBB1E-8470-468D-9EB7-A6EB46705DFC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{217FBB1E-8470-468D-9EB7-A6EB46705DFC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{217FBB1E-8470-468D-9EB7-A6EB46705DFC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{217FBB1E-8470-468D-9EB7-A6EB46705DFC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F52C2971-A700-4C4F-B05B-783108197363}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F52C2971-A700-4C4F-B05B-783108197363}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F52C2971-A700-4C4F-B05B-783108197363}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F52C2971-A700-4C4F-B05B-783108197363}.Release|Any CPU.Build.0 = Release|Any CPU
+		{24D508A3-1565-4604-AAE3-EF7B133B24E6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{24D508A3-1565-4604-AAE3-EF7B133B24E6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{24D508A3-1565-4604-AAE3-EF7B133B24E6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{24D508A3-1565-4604-AAE3-EF7B133B24E6}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {6B5627C5-ED51-4C47-B549-38D8FEBCEFED}
+	EndGlobalSection
+EndGlobal

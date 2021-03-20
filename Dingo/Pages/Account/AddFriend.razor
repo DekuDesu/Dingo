@@ -1,0 +1,133 @@
+﻿@using Dingo.Data.UserInfo
+
+@inject NavigationManager NavManager
+@inject ILogger<ChangeUsername> logger
+
+@inject IFriendHandler friendHandler
+@inject IFriendListHandler friendListHandler
+@inject IDisplayNameHandler displayNameHander
+@inject IValidator<DisplayNameModel> searchValidator
+
+<EditForm Context="User" @bind-model="displayName" OnValidSubmit="@Submit">
+    <div class="row">
+        <h2>Add Friend</h2>
+    </div>
+    <div class="row">
+        <div class="row">
+            <InputText class="form-control my-2" @bind-Value=@displayName.DisplayName />
+        </div>
+        <div class="row">
+            @if (SearchTermValidationFailures is not null)
+            {
+                @foreach (var item in SearchTermValidationFailures)
+                {
+                    <p class="alert-warning rounded border">@item.ErrorMessage</p>
+                }
+            }
+        </div>
+        <div class="row col-6">
+            <button type="submit" class=@ButtonClass>
+                <span class=@CheckClass role="status" aria-hidden="true" style=@CheckStyle></span>
+                <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style=@SpinnerStyle></span>
+                @ButtonText
+            </button>
+        </div>
+    </div>
+</EditForm>
+
+@code
+{
+
+    [Parameter]
+    public string Id { get; set; } = null;
+
+    // make sure we get the display name
+    [CascadingParameter]
+    protected Task<AuthenticationState> AuthStat { get; set; }
+
+    private string SpinnerStyle = "display: none";
+    private string ButtonText = "Search";
+    private string ButtonClass = "btn btn-primary";
+    private string CheckStyle = "display: none";
+    private string CheckClass = "oi oi-check";
+
+    private enum ButtonState
+    {
+        normal,
+        completed,
+        failed
+    }
+
+    private DisplayNameModel displayName = new();
+
+    private List<FluentValidation.Results.ValidationFailure> SearchTermValidationFailures;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+
+        logger.LogInformation("Initialized Component {ComponentName} Params: {Param1}:{Param1Value}", nameof(AddFriend), nameof(Id), Id);
+    }
+
+    private void UpdateButton(string text, ButtonState state = ButtonState.normal, bool spinner = false)
+    {
+        SpinnerStyle = spinner ? "" : "display: none;";
+        ButtonText = text ?? "Change";
+        ButtonClass = state switch
+        {
+            ButtonState.failed => "btn btn-danger",
+            ButtonState.completed => "btn btn-success",
+            _ => "btn btn-primary"
+        };
+        CheckStyle = state == ButtonState.completed ? "" : "display: none;";
+        CheckClass = state switch
+        {
+            ButtonState.failed => "oi oi-x",
+            _ => "oi oi-check"
+        };
+    }
+
+    private async Task Submit()
+    {
+        SearchTermValidationFailures?.Clear();
+
+        var validation = searchValidator.Validate(displayName);
+
+        if (validation.IsValid)
+        {
+            Task Wait()
+            {
+                return Task.Run(() => System.Threading.Thread.Sleep(500));
+            }
+            // update the button to show that we are working on changing the name
+            UpdateButton("Searching", ButtonState.normal, true);
+
+            logger.LogInformation("Finding friend {FriendId}", displayName.DisplayName);
+
+            string foundId = await displayNameHander.GetIdFromDisplayName(displayName.DisplayName);
+
+            logger.LogInformation("Found Id {Id} for {FriendId}", foundId, displayName.DisplayName);
+
+            if (foundId?.Length is null or 0)
+            {
+                // don't allow users to know that we instantly invalidated their request
+                await Wait();
+                UpdateButton("Not Found", ButtonState.failed, false);
+                return;
+            }
+
+            await friendHandler.SendRequest(Id, foundId);
+
+            // this is to make the user feel like the username has really been changed
+            await Wait();
+
+            // update the GUI to reflect the completed process
+            UpdateButton("Request Sent", ButtonState.completed, false);
+        }
+        else
+        {
+            SearchTermValidationFailures = validation.Errors;
+            return;
+        }
+    }
+}

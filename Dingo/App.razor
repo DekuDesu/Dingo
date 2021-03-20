@@ -1,0 +1,15 @@
+﻿
+<CascadingAuthenticationState>
+    <Router AppAssembly="@typeof(Program).Assembly">
+        <Found Context="routeData">
+            <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)" />
+        </Found>
+        <NotFound>
+            <LayoutView Layout="@typeof(MainLayout)">
+                <h1>
+                    Dingo 404 doge not found
+                </h1>
+            </LayoutView>
+        </NotFound>
+    </Router>
+</CascadingAuthenticationState>

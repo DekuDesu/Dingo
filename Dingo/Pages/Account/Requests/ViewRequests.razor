@@ -1,0 +1,44 @@
+﻿@using DingoDataAccess.Models.Friends
+
+@inject ILogger<ViewRequests> logger
+@inject IFriendListHandler friendlistHandler
+@inject IFriendHandler friendHandler
+
+<table class="table table-striped border rounded table-hover">
+    <tbody>
+        @foreach (var item in Requests)
+        {
+            <Dingo.Pages.Account.Requests.RequestEntry Id=@Id friend=@item Requests=@Requests StateHasChangedCallback=@StateHasChangedCallback />
+        }
+    </tbody>
+</table>
+
+@code {
+    [Parameter]
+    public string Id { get; set; }
+
+    private List<IFriendModel> Requests { get; set; } = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await GetRequests();
+
+        await base.OnInitializedAsync();
+
+        logger.LogInformation("Initialized Component {ComponentName} Params: {Param1}:{Param1Value}", nameof(ViewRequests), nameof(Id), Id);
+    }
+
+    private async Task GetRequests()
+    {
+        logger.LogInformation("Fetching request list for {Id}", Id);
+
+        Requests = await friendHandler.GetRequests(Id);
+
+        logger.LogInformation("Found request list for {Id} {Count}", Id, Requests.Count);
+    }
+
+    private void StateHasChangedCallback()
+    {
+        StateHasChanged();
+    }
+}

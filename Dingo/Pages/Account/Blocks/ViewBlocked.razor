@@ -1,0 +1,39 @@
+﻿@using DingoDataAccess.Models.Friends
+
+@inject ILogger<ViewBlocked> logger
+@inject IFriendListHandler friendlistHandler
+@inject IFriendHandler friendHandler
+
+<table class="table table-striped border rounded table-hover">
+    <tbody>
+        @foreach (var item in Blocked)
+        {
+            <BlockEntry Id=@Id Blocked=@item BlockedPeople=@Blocked />
+        }
+    </tbody>
+</table>
+
+@code {
+    [Parameter]
+    public string Id { get; set; }
+
+    private List<IFriendModel> Blocked { get; set; } = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await GetBlocked();
+
+        await base.OnInitializedAsync();
+
+        logger.LogInformation("Initialized Component {ComponentName} Params: {Param1}:{Param1Value}", nameof(ViewBlocked), nameof(Id), Id);
+    }
+
+    private async Task GetBlocked()
+    {
+        logger.LogInformation("Fetching request list for {Id}", Id);
+
+        Blocked = await friendHandler.GetBlocked(Id);
+
+        logger.LogInformation("Found request list for {Id} {Count}", Id, Blocked.Count);
+    }
+}

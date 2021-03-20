@@ -1,0 +1,98 @@
+﻿@using Data.GeneralModels
+
+@inject ILogger<ChangeUsername> logger
+
+@inject NavigationManager NavManager
+
+@inject IDisplayNameHandler nameHandler
+
+@code{
+    [Parameter]
+    public string DisplayName { get; set; } = null;
+
+    [Parameter]
+    public string Id { get; set; } = null;
+
+    // make sure we get the display name
+    [CascadingParameter]
+    protected Task<AuthenticationState> AuthStat { get; set; }
+
+    private SingleSearchTermModel newUsername = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+
+        logger.LogInformation("Initialized Component {ComponentName} Params: {Param1}:{Param1Value} {Param2}:{Param2Value}", nameof(ChangeUsername), nameof(Id), Id, nameof(DisplayName), DisplayName);
+
+        // update the placeholder
+        newUsername.Term = DisplayName;
+    }
+}
+
+<EditForm Context="User" @bind-model="newUsername" OnValidSubmit="@UpdateUsername">
+    <div class="row">
+        <h2>Change Display Name</h2>
+    </div>
+    <div class="row">
+        <div class="row">
+            <InputText class="form-control my-2" @bind-Value=@newUsername.Term />
+        </div>
+        <div class="row col-6">
+            <button type="submit" class=@ButtonClass>
+                <span class="oi oi-check" role="status" aria-hidden="true" style=@CheckStyle></span>
+                <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style=@SpinnerStyle></span>
+                @ButtonText
+            </button>
+        </div>
+    </div>
+</EditForm>
+
+@code {
+
+    private string SpinnerStyle = "display: none";
+    private string ButtonText = "Change";
+    private string ButtonClass = "btn btn-primary";
+    private string CheckStyle = "display: none";
+
+    private void UpdateButton(string text, bool complete, bool spinner)
+    {
+        SpinnerStyle = spinner ? "" : "display: none;";
+        ButtonText = text ?? "Change";
+        ButtonClass = complete ? "btn btn-success" : "btn btn-primary";
+        CheckStyle = complete ? "" : "display: none;";
+    }
+
+    private async Task UpdateUsername()
+    {
+        // make sure the name isnt empty
+        if (string.IsNullOrEmpty(newUsername.Term))
+        {
+            return;
+        }
+
+        // make sure it's not the same name
+        if (newUsername.Term == DisplayName)
+        {
+            return;
+        }
+
+        // update the button to show that we are working on changing the name
+        UpdateButton("Changing", false, true);
+
+        // logg the information
+        logger.LogInformation("Changing username for {Id} to: {NewUsername}", Id, newUsername.Term);
+
+        // set / update the name, this uses parameterized procedures and rewplaces ; and ' limiting sql injection opportunities
+        await nameHandler.SetDisplayName(Id, newUsername.Term);
+
+        // update the field so we cant change the name multiple times to the same thing
+        DisplayName = newUsername.Term;
+
+        // this is to make the user feel like the username has really been changed
+        await Task.Run(() => System.Threading.Thread.Sleep(500));
+
+        // update the GUI to reflect the completed process
+        UpdateButton("Changed", true, false);
+    }
+}

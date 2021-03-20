@@ -1,0 +1,78 @@
+﻿@inject ILogger<ManageFriends> logger
+
+<div class="row">
+    @foreach (var button in Buttons)
+    {
+        <div class="col-md-3">
+            <div class="row">
+                <button class=@(button.selected ? "btn btn-primary text-nowrap" : "btn btn-outline-primary text-nowrap") @onclick=@button.OnClick>
+                    @button.Text
+                </button>
+            </div>
+        </div>
+    }
+</div>
+<div class="row my-2">
+    @switch (selectedButton)
+    {
+        case 0:
+            <Dingo.Pages.Account.Friends.DisplayFriends Id=@Id />
+            break;
+        case 1:
+            <AddFriend Id=@Id />
+            break;
+        case 2:
+            <Dingo.Pages.Account.Requests.ViewRequests Id=@Id />
+            break;
+        case 3:
+            <Dingo.Pages.Account.Blocks.ViewBlocked Id=@Id />
+            break;
+    }
+</div>
+
+@code {
+    [Parameter]
+    public string Id { get; set; }
+
+    [Parameter]
+    public string DisplayName { get; set; }
+
+    private List<(string Text, bool selected, Action OnClick)> Buttons = new();
+
+    private int selectedButton = 0;
+
+    private void SelectButton(int index)
+    {
+        selectedButton = index;
+        for (int i = 0; i < Buttons.Count; i++)
+        {
+            if (i != index)
+            {
+                var stored = Buttons[i];
+                stored.selected = false;
+                Buttons[i] = stored;
+            }
+            else
+            {
+                var stored = Buttons[i];
+                stored.selected = true;
+                Buttons[i] = stored;
+            }
+        }
+    }
+
+    private void SetupButtons()
+    {
+        Buttons.Add(("Friends", true, () => SelectButton(0)));
+        Buttons.Add(("Add Friend", false, () => SelectButton(1)));
+        Buttons.Add(("Requests", false, () => SelectButton(2)));
+        Buttons.Add(("Blocked", false, () => SelectButton(3)));
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+        logger.LogInformation("Initialized Component {ComponentName} Params: {Param1}:{Param1Value} {Param2}:{Param2Value}", nameof(ManageFriends), nameof(Id), Id, nameof(DisplayName), DisplayName);
+        SetupButtons();
+    }
+}

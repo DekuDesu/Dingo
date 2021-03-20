@@ -1,0 +1,96 @@
+﻿@inherits LayoutComponentBase
+
+@inject IDisplayNameHandler nameHandler
+@inject IStatusHandler statusHandler
+@inject IFriendHandler friendHandler
+
+@using DingoDataAccess.Models.Friends
+
+<div class="sidebar">
+    <CascadingValue Value=@Id Name="Id">
+        <CascadingValue Value=@DisplayName Name="DisplayName">
+            <CascadingValue Value=@MyFriendInfo Name="MyFriendInfo">
+                <NavMenu />
+            </CascadingValue>
+        </CascadingValue>
+    </CascadingValue>
+</div>
+
+<div class="main">
+    <div class="content px-4">
+        <CascadingValue Value=@Id Name="Id">
+            <CascadingValue Value=@DisplayName Name="DisplayName">
+                <CascadingValue Value=@MyFriendInfo Name="MyFriendInfo">
+                    @Body
+                </CascadingValue>
+            </CascadingValue>
+        </CascadingValue>
+    </div>
+</div>
+
+@code{
+    [Parameter]
+    public string Id { get; set; }
+
+    [Parameter]
+    public string DisplayName { get; set; }
+
+    [Parameter]
+    public IFriendModel MyFriendInfo { get; set; }
+
+    [CascadingParameter]
+    protected Task<AuthenticationState> AuthStat { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        // only get the id and name if its not passed a param as a component
+        // this helps reduce the # of requests to the DB
+        // check to see if we need to get the display and id to change the name
+        if (AuthStat != null)
+        {
+            await SetUserInfo();
+
+            await SetOnlineStatus();
+        }
+
+        await base.OnInitializedAsync();
+    }
+
+    private async Task SetOnlineStatus()
+    {
+        var lastStatus = await statusHandler.TryGetLastVirtualStatus(Id);
+
+        // make sure our virtual status is set before our actual status to avoid notfiying other clients
+        if (lastStatus.result && lastStatus.status != DingoDataAccess.Enums.OnlineStatus.Offline)
+        {
+            if (MyFriendInfo.VirtualStatus != lastStatus.status)
+            {
+                await statusHandler.SetVirtualStatus(Id, lastStatus.status);
+                MyFriendInfo.VirtualStatus = lastStatus.status;
+            }
+        }
+
+        // set the internal status of the user to online
+        await statusHandler.SetStatus(Id, DingoDataAccess.Enums.OnlineStatus.Online);
+
+        if (MyFriendInfo != null)
+        {
+            MyFriendInfo.Status = DingoDataAccess.Enums.OnlineStatus.Online;
+        }
+    }
+
+
+    private async Task SetUserInfo()
+    {
+        // get the auth state from the cascaded param
+        var auth = await AuthStat;
+
+        // get the id, it's okay if its null becuase GetDisplayName returns instantly if it's null
+        Id = auth?.User?.Claims?.FirstOrDefault()?.Value;
+
+        // get the display name, this should NEVER be null as it's displayed to the user
+        DisplayName = Id is null ? "" : await nameHandler.GetDisplayName(Id) ?? "";
+
+        MyFriendInfo = await friendHandler.GetFriend(Id);
+    }
+}

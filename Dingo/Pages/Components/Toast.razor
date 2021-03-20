@@ -1,0 +1,80 @@
+﻿@using Dingo.Data.GeneralModels
+
+@inject ILogger<Toast> logger
+@using System.Timers
+
+<div class=@ToastClass role="alert" aria-live="assertive" aria-atomic="true">
+    <div class="toast-header">
+        <img src="..." class="rounded me-2" alt="">
+        <strong class="me-auto">@toast.Title</strong>
+        <small class="text-muted">@toast.TimeSent.ToLocalTime()</small>
+        <button type="button" class="btn-close" aria-label="Close" @onclick=Close></button>
+    </div>
+    <div class="toast-body">
+        @toast.Content
+        <div class="progress my-2">
+            <div class="progress-bar-striped bg-info progress-bar-animated" role="progressbar" style=@ProgressStyle aria-valuenow=@((int)ProgressValue) aria-valuemin="0" aria-valuemax="100"></div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public ToastModel toast { get; set; } = new();
+
+    [Parameter]
+    public Action StateHasChangedCallback { get; set; }
+
+    [Parameter]
+    public List<ToastModel> toasts { get; set; }
+
+    private double ProgressValue = 100;
+
+    private string ProgressStyle => $"width: {ProgressValue}%;";
+
+    private string ToastClass => ShowToast ? "toast show" : "toast";
+
+    private bool ShowToast = true;
+
+    private Timer AutoCloseTimer;
+    private Timer UpdateProgressTimer;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+
+        if (toast.Timeout != default)
+        {
+            AutoCloseTimer = new Timer();
+            AutoCloseTimer.Interval = toast.Timeout.TotalMilliseconds;
+            AutoCloseTimer.Elapsed += (x, y) => InvokeAsync(() => Close());
+            UpdateProgressTimer = new Timer();
+            UpdateProgressTimer.Interval = toast.Timeout.TotalMilliseconds / 200;
+            UpdateProgressTimer.Elapsed += (x, y) =>
+            {
+                ProgressValue -= 0.5;
+                InvokeAsync(() => StateHasChanged());
+            };
+            UpdateProgressTimer.AutoReset = true;
+            AutoCloseTimer.Start();
+            UpdateProgressTimer.Start();
+        }
+    }
+
+    private async Task Close()
+    {
+        toast.Remove = true;
+        if (toast != null)
+        {
+            if (toast.OnClose != null)
+            {
+                await toast?.OnClose?.Invoke();
+            }
+        }
+        AutoCloseTimer?.Stop();
+        AutoCloseTimer?.Dispose();
+        UpdateProgressTimer?.Stop();
+        UpdateProgressTimer?.Dispose();
+        StateHasChangedCallback?.Invoke();
+    }
+}
