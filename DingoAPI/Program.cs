@@ -27,7 +27,17 @@ namespace DingoAPI
             try
             {
                 Log.Information("DingoAPI is Starting");
-                CreateHostBuilder(args).Build().Run();
+                CreateHostBuilder(args)
+                    .ConfigureAppConfiguration((hostContext, builder) =>
+                    {
+                        if (hostContext.HostingEnvironment.IsDevelopment())
+                        {
+                            builder.AddUserSecrets<Program>();
+                            Log.Information("Configured Development Only Secrets");
+                        }
+                    })
+                    .Build()
+                    .Run();
             }
             catch (Exception ex)
             {
