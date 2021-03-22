@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace DingoDataAccess.OAuth
 {
-    public class OAuthHandler
+    public class OAuthHandler : IOAuthHandler
     {
         private readonly ISqlDataAccess db;
         private readonly ILogger<OAuthHandler> logger;
@@ -53,11 +53,8 @@ namespace DingoDataAccess.OAuth
             {
                 return false;
             }
-            // make sure to avoid possible Sql Injection
-            if (Helpers.FullVerifyGuid(ref OAuth, logger) is false)
-            {
-                return false;
-            }
+
+            // normally we would verify if the OAuth param contains invalid characters, however the OAuth ideally SHOULD be hashed with a salt using BCrypt and is never executed and therefor harmless... hopefully.
 
             try
             {

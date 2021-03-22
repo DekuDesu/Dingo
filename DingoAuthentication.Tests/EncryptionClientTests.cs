@@ -35,7 +35,7 @@ namespace DingoAuthentication.Tests
             // signature should be 64 bytes
             Assert.True(bundle.PublicKey.Signature.Length == 64);
 
-            Assert.True(DHRatchetTests.VerifyBytes(bundle.X509IdentityKey, client.dhRatchet.X509IndentityKey));
+            Assert.True(DHRatchetTests.VerifyBytes(bundle.X509IdentityKey, client.dhRatchet.X509IdentityKey));
 
             Assert.True(DHRatchetTests.VerifyBytes(bundle.PublicKey.PublicKey, client.dhRatchet.PublicKey));
 
@@ -62,6 +62,52 @@ namespace DingoAuthentication.Tests
             // just becuase the functions returned true does not necissarily mean that 
             // a secret was successfully created - unless we test it that is
             Assert.True(VerifyBytes(alice.dhRatchet.PrivateKey, bob.dhRatchet.PrivateKey));
+        }
+
+        [Fact]
+        public void StateCanBeExportedAndImported()
+        {
+            var alice = CreateClient();
+
+            var alicesBundle = alice.GenerateBundle();
+
+            var bob = CreateClient();
+
+            var bobsBundle = bob.GenerateBundle();
+
+            // make sure the functions return correctly
+            Assert.True(alice.CreateSecretUsingBundle(bobsBundle));
+
+            Assert.True(bob.CreateSecretUsingBundle(alicesBundle));
+
+            // make sure a secret was actually created using those budles,
+            // just becuase the functions returned true does not necissarily mean that 
+            // a secret was successfully created - unless we test it that is
+            Assert.True(VerifyBytes(alice.dhRatchet.PrivateKey, bob.dhRatchet.PrivateKey));
+
+            string data = "Hello World";
+
+            Assert.True(alice.TryEncrypt(data, out EncryptedDataModel encryptedData));
+
+            Assert.True(bob.TryDecrypt(encryptedData, out string result));
+
+            Assert.Equal(data, result);
+
+            string aliceState = alice.ExportState();
+
+            alice = CreateClient();
+
+            alice.ImportState(aliceState);
+
+            Assert.True(VerifyBytes(alice.dhRatchet.PrivateKey, bob.dhRatchet.PrivateKey));
+
+            data = "Hello World 2";
+
+            Assert.True(alice.TryEncrypt(data, out encryptedData));
+
+            Assert.True(bob.TryDecrypt(encryptedData, out result));
+
+            Assert.Equal(data, result);
         }
 
         [Fact]

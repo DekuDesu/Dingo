@@ -27,6 +27,7 @@ using Dingo.Data.GeneralModels;
 using FluentValidation;
 using Dingo.Data.UserInfo;
 using Microsoft.AspNetCore.Components.Server.Circuits;
+using DingoDataAccess.OAuth;
 
 namespace Dingo
 {
@@ -109,6 +110,7 @@ namespace Dingo
 
             services.AddServerSideBlazor();
             services.AddScoped<AuthenticationStateProvider, RevalidatingIdentityAuthenticationStateProvider<IdentityUser>>();
+
             services.AddSingleton<WeatherForecastService>();
 
             services.AddTransient<ISqlDataAccess, SqlDataAccess>();
@@ -125,9 +127,13 @@ namespace Dingo
             // object caches queries in memory and needs to be a singleton
             services.AddSingleton(typeof(IFriendHandler), typeof(FriendHandler<FriendModel>));
 
+            // handles db queries to get and set the online status of accounts
+            services.AddTransient<IStatusHandler, StatusHandler>();
+
             services.AddTransient(typeof(IValidator<DisplayNameModel>), typeof(DisplayNameValidator));
             services.AddTransient(typeof(IValidator<SingleSearchTermModel>), typeof(SingleSearchTermValidator));
-            services.AddTransient<IStatusHandler, StatusHandler>();
+
+            services.AddTransient<IOAuthHandler, OAuthHandler>();
 
         }
 

@@ -80,6 +80,61 @@ namespace DingoAuthentication.Tests
             Assert.Equal(dataToEncrypt, result);
         }
 
+        [Theory]
+        [InlineData("Stata")]
+        [InlineData("null")]
+        [InlineData(" ")]
+        [InlineData("*")]
+        [InlineData("DROP TABLE ;")]
+        [InlineData("01 22 001 22002 29929")]
+        public void ImportAndExportStateWorks(string dataToEncrypt)
+        {
+            var dh = CreateDiffieRatchet();
+            var alice = CreateRatchet();
+            var bob = CreateRatchet();
+
+            // seed the ratchets
+            alice.Reset(dh.PrivateKey);
+            bob.Reset(dh.PrivateKey);
+
+            byte[] PrivateKey;
+
+            Assert.True(alice.GenerateNextKey(out PrivateKey));
+
+            EncryptedDataModel data;
+
+            Assert.True(aes.TryEncrypt(dataToEncrypt, PrivateKey, out data));
+
+            byte[] BobsPrivateKey;
+            Assert.True(bob.GenerateNextKey(out BobsPrivateKey));
+
+            // this is the test
+
+            string state = alice.ExportState();
+
+            alice = CreateRatchet();
+
+            alice.ImportState(state);
+
+            // this is the test
+
+            string result;
+
+            Assert.True(aes.TryDecrypt(data, BobsPrivateKey, out result));
+
+            Assert.Equal(dataToEncrypt, result);
+
+            Assert.True(alice.GenerateNextKey(out PrivateKey));
+
+            Assert.True(aes.TryEncrypt(dataToEncrypt, PrivateKey, out data));
+
+            Assert.True(bob.GenerateNextKey(out BobsPrivateKey));
+
+            Assert.True(aes.TryDecrypt(data, BobsPrivateKey, out result));
+
+            Assert.Equal(dataToEncrypt, result);
+        }
+
         private IKeyDerivationRatchet<EncryptedDataModel> CreateRatchet()
         {
             return new KeyDerivationRatchet<EncryptedDataModel>(kdrLogger, new KeyDerivationFunction(), new SymmetricHandler<EncryptedDataModel>(smLogger));
