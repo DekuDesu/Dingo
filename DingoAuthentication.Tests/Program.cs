@@ -12,6 +12,8 @@ using DingoAuthentication.Tests;
 using DingoDataAccess.Compression;
 using Microsoft.Extensions.Logging;
 using DingoAuthentication.Encryption;
+using System.Net.Http;
+using Xunit;
 
 namespace DingoAuthentication.Tests
 {
@@ -19,16 +21,40 @@ namespace DingoAuthentication.Tests
     {
         private static Encoding Encoder = new UnicodeEncoding();
 
+        private static HttpClient client = new();
+
         public static async Task Main()
         {
             Console.OutputEncoding = Encoding.Unicode;
 
             await Wait(100);
 
-            //DiffieHellmanRatchet dhRatchet = new(new TmpLogger<DiffieHellmanRatchet>());
+            var ratchet = CreateRatchet();
+
+            ratchet.GenerateBaseKeys();
+
+            Console.WriteLine("Press enter to run API Test");
+            Console.ReadLine();
+
+            ServerKey response = Newtonsoft.Json.JsonConvert.DeserializeObject<ServerKey>(await client.GetStringAsync("https://localhost:5001/EncryptedSessions"));
+
+            Console.WriteLine($"{response.X509IdentityKey}");
 
             Console.ReadLine();
             Console.ReadLine();
+        }
+
+        private class ServerKey
+        {
+            public byte[] X509IdentityKey { get; set; }
+        }
+
+        private class HandshakeObject
+        {
+            public string Id { get; set; }
+            public byte[] X509IdentityKey { get; set; }
+            public byte[] PublicKey { get; set; }
+            public byte[] Signature { get; set; }
         }
 
         private class Client
@@ -36,7 +62,15 @@ namespace DingoAuthentication.Tests
 
         }
 
+        public static TmpLogger<DiffieHellmanRatchet> logger = new();
+        public static TmpLogger<DiffieHellmanHandler> dhLogger = new();
+        public static TmpLogger<SignatureHandler> sLogger = new();
+        public static TmpLogger<SymmetricHandler<EncryptedDataModel>> smLogger = new();
+        private static IDiffieHellmanRatchet CreateRatchet()
+        {
+            return new DiffieHellmanRatchet(logger, new DiffieHellmanHandler(dhLogger), new KeyDerivationFunction(), new SignatureHandler(sLogger));
 
+        }
 
         #region Helpers
 

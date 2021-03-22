@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Xunit;
 using DingoAuthentication.Encryption;
 using System.Security.Cryptography;
+using Newtonsoft.Json;
 
 namespace DingoAuthentication.Tests
 {
@@ -21,7 +22,7 @@ namespace DingoAuthentication.Tests
         {
             IDiffieHellmanRatchet ratchet = CreateRatchet();
 
-            Assert.NotNull(ratchet.X509IndentityKey);
+            Assert.NotNull(ratchet.X509IdentityKey);
             Assert.NotNull(ratchet.PublicKey);
             Assert.NotNull(ratchet.PrivateKey);
             Assert.NotNull(ratchet.IdentitySignature);
@@ -35,7 +36,7 @@ namespace DingoAuthentication.Tests
 
             ISignatureHandler signer = new SignatureHandler(sLogger);
 
-            Assert.True(signer.Verify(ratchet.PublicKey, ratchet.IdentitySignature, ratchet.X509IndentityKey));
+            Assert.True(signer.Verify(ratchet.PublicKey, ratchet.IdentitySignature, ratchet.X509IdentityKey));
         }
 
         [Fact]
@@ -46,11 +47,11 @@ namespace DingoAuthentication.Tests
             IDiffieHellmanRatchet bob = CreateRatchet();
 
             // make sure they're not the same person that would be awkward
-            Assert.True(alice.X509IndentityKey != bob.X509IndentityKey);
+            Assert.True(alice.X509IdentityKey != bob.X509IdentityKey);
 
-            Assert.True(bob.TryCreateSharedSecret(alice.X509IndentityKey, alice.PublicKey, alice.IdentitySignature));
+            Assert.True(bob.TryCreateSharedSecret(alice.X509IdentityKey, alice.PublicKey, alice.IdentitySignature));
 
-            Assert.True(alice.TryCreateSharedSecret(bob.X509IndentityKey, bob.PublicKey, bob.IdentitySignature));
+            Assert.True(alice.TryCreateSharedSecret(bob.X509IdentityKey, bob.PublicKey, bob.IdentitySignature));
 
             // now that we have created a shared secret make sure theyre the same secret
             Assert.True(VerifyBytes(alice.PrivateKey, bob.PrivateKey));
@@ -63,9 +64,9 @@ namespace DingoAuthentication.Tests
             IDiffieHellmanRatchet bob = CreateRatchet();
 
             // make sure they're not the same person that would be awkward
-            Assert.True(alice.X509IndentityKey != bob.X509IndentityKey);
+            Assert.True(alice.X509IdentityKey != bob.X509IdentityKey);
 
-            Assert.True(bob.TryCreateSharedSecret(alice.X509IndentityKey, alice.PublicKey, alice.IdentitySignature));
+            Assert.True(bob.TryCreateSharedSecret(alice.X509IdentityKey, alice.PublicKey, alice.IdentitySignature));
 
             byte[] sig = bob.IdentitySignature;
 
@@ -73,7 +74,7 @@ namespace DingoAuthentication.Tests
 
             sig = sig.Select(x => (byte)r.Next(byte.MinValue, byte.MaxValue)).ToArray();
 
-            Assert.False(alice.TryCreateSharedSecret(bob.X509IndentityKey, bob.PublicKey, sig));
+            Assert.False(alice.TryCreateSharedSecret(bob.X509IdentityKey, bob.PublicKey, sig));
         }
 
         [Fact]
@@ -83,11 +84,34 @@ namespace DingoAuthentication.Tests
             IDiffieHellmanRatchet bob = CreateRatchet();
 
             // make sure they're not the same person that would be awkward
-            Assert.True(alice.X509IndentityKey != bob.X509IndentityKey);
+            Assert.True(alice.X509IdentityKey != bob.X509IdentityKey);
 
-            Assert.True(bob.TryCreateSharedSecret(alice.X509IndentityKey, alice.PublicKey, alice.IdentitySignature));
+            if (alice is DiffieHellmanRatchet df)
+            {
+                // "\"MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEyLRqUNQMLQDPzMPA6EDpmCt4FJ41/z6B36IoyP2YZDDwshdm+79Cq+FacJskIWFItpaTXhyi0PsMO0E09EioVA==\""
+                var x = JsonConvert.SerializeObject(df.X509IdentityKey);
+                // "\"RUNLMSAAAACNHkLrN+uQ9nPbmcA1ycltM5nDhT+WXjfYxqroZDzADnWrj0cs+9dy9RQ8zRASehjdCsGXxvFTsleL8HlgKUXE\""
+                var y = JsonConvert.SerializeObject(df.PublicKey);
+                // "\"h5XA+r0d2cPwDjhn6ABs8/OEo8mmhbkspqHCFCPNzM4NNsPOp8wpQP0N0TbR0Z0t0NiUS/cgxrem3krrOgZ3nA==\""
+                var z = JsonConvert.SerializeObject(df.IdentitySignature);
+                _ = x;
+                _ = y;
+                _ = z;
+                /*
+                 {
+                    "x509IdentityKey": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEyLRqUNQMLQDPzMPA6EDpmCt4FJ41/z6B36IoyP2YZDDwshdm+79Cq+FacJskIWFItpaTXhyi0PsMO0E09EioVA==",
+                    "signature": "h5XA+r0d2cPwDjhn6ABs8/OEo8mmhbkspqHCFCPNzM4NNsPOp8wpQP0N0TbR0Z0t0NiUS/cgxrem3krrOgZ3nA==",
+                    "publicKey": "RUNLMSAAAACNHkLrN+uQ9nPbmcA1ycltM5nDhT+WXjfYxqroZDzADnWrj0cs+9dy9RQ8zRASehjdCsGXxvFTsleL8HlgKUXE",
+                    "id": "string"
+                }
+                 */
+            }
 
-            Assert.True(alice.TryCreateSharedSecret(bob.X509IndentityKey, bob.PublicKey, bob.IdentitySignature));
+            Assert.True(bob.TryCreateSharedSecret(alice.X509IdentityKey, alice.PublicKey, alice.IdentitySignature));
+
+            Assert.True(alice.TryCreateSharedSecret(bob.X509IdentityKey, bob.PublicKey, bob.IdentitySignature));
+
+
 
             // store this for later testing
             byte[] oldSharedSecret = alice.PrivateKey;
@@ -142,18 +166,19 @@ namespace DingoAuthentication.Tests
 
             ISignatureHandler signer = new SignatureHandler(sLogger);
 
-            Assert.True(signer.Verify(ratchet.PublicKey, ratchet.IdentitySignature, ratchet.X509IndentityKey));
+            Assert.True(signer.Verify(ratchet.PublicKey, ratchet.IdentitySignature, ratchet.X509IdentityKey));
 
             byte[] oldKey = ratchet.PrivateKey;
 
             ratchet.GenerateBaseKeys();
 
             // make sure the new keys verify correctly
-            Assert.True(signer.Verify(ratchet.PublicKey, ratchet.IdentitySignature, ratchet.X509IndentityKey));
+            Assert.True(signer.Verify(ratchet.PublicKey, ratchet.IdentitySignature, ratchet.X509IdentityKey));
 
             // make sure the new key isn't the old key
             Assert.False(VerifyBytes(oldKey, ratchet.PrivateKey));
         }
+
 
         [Theory]
         [InlineData(1_000)]
@@ -163,12 +188,12 @@ namespace DingoAuthentication.Tests
             IDiffieHellmanRatchet bob = CreateRatchet();
 
             // make sure they're not the same person that would be awkward
-            Assert.True(alice.X509IndentityKey != bob.X509IndentityKey);
+            Assert.True(alice.X509IdentityKey != bob.X509IdentityKey);
 
             // make sure they sucessfully create a secret
-            Assert.True(bob.TryCreateSharedSecret(alice.X509IndentityKey, alice.PublicKey, alice.IdentitySignature));
+            Assert.True(bob.TryCreateSharedSecret(alice.X509IdentityKey, alice.PublicKey, alice.IdentitySignature));
 
-            Assert.True(alice.TryCreateSharedSecret(bob.X509IndentityKey, bob.PublicKey, bob.IdentitySignature));
+            Assert.True(alice.TryCreateSharedSecret(bob.X509IdentityKey, bob.PublicKey, bob.IdentitySignature));
 
             HashSet<string> hashedKeys = new HashSet<string>();
 

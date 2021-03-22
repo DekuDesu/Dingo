@@ -1,4 +1,6 @@
+using DingoAuthentication.Encryption;
 using DingoDataAccess;
+using DingoDataAccess.OAuth;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.HttpsPolicy;
@@ -19,8 +21,8 @@ namespace DingoAPI
 {
     public class Startup
     {
-        private static byte[] X509IdentityKey { get; set; }
-        private static byte[] PrivateIdentityKey { get; set; }
+        internal static byte[] X509IdentityKey { get; set; }
+        internal static byte[] PrivateIdentityKey { get; set; }
 
         public Startup(IConfiguration configuration)
         {
@@ -33,15 +35,27 @@ namespace DingoAPI
         public void ConfigureServices(IServiceCollection services)
         {
             // Loads Keys
-            if (long.TryParse(Configuration["Server:X509IdentityKey"], out long tmp))
-            {
-                X509IdentityKey = BitConverter.GetBytes(tmp);
-            }
-            if (long.TryParse(Configuration["Server:PrivateIdentityKey"], out tmp))
-            {
-                PrivateIdentityKey = BitConverter.GetBytes(tmp);
-            }
+            X509IdentityKey = Newtonsoft.Json.JsonConvert.DeserializeObject<byte[]>(Configuration["Server:X509IdentityKey"]);
+            PrivateIdentityKey = Newtonsoft.Json.JsonConvert.DeserializeObject<byte[]>(Configuration["Server:PrivateIdentityKey"]);
 
+            services.AddTransient<ISqlDataAccess, SqlDataAccess>();
+
+            services.AddTransient(typeof(ISymmetricHandler<EncryptedDataModel>), typeof(SymmetricHandler<EncryptedDataModel>));
+            services.AddTransient<IDiffieHellmanHandler, DiffieHellmanHandler>();
+            services.AddTransient<IKeyDerivationFunction, KeyDerivationFunction>();
+            services.AddTransient(typeof(IKeyDerivationRatchet<EncryptedDataModel>), typeof(KeyDerivationRatchet<EncryptedDataModel>));
+            services.AddTransient<IKeyBundleModel, KeyBundleModel>();
+            services.AddTransient<ISignedKeyModel, SignedKeyModel>();
+            services.AddTransient<ISignatureHandler, SignatureHandler>();
+
+            services.AddTransient<IDiffieHellmanRatchet, DiffieHellmanRatchet>();
+
+            services.AddTransient<IEncryptedMessageModel, EncryptedMessageModel>();
+
+            services.AddTransient<IOAuthHandler, OAuthHandler>();
+
+            // the type(dynamic) provided here is not actually used FYI it can be anything, but it MUST be injected using whatever you put here as a type argument
+            services.AddTransient(typeof(IPasswordHasher<dynamic>), typeof(DingoAuthentication.PasswordHasher<dynamic>));
 
             services.AddCors(options =>
             {
@@ -54,11 +68,6 @@ namespace DingoAPI
             {
                 c.SwaggerDoc("v1", new OpenApiInfo { Title = "DingoAPI", Version = "v1" });
             });
-
-            services.AddTransient<ISqlDataAccess, SqlDataAccess>();
-
-            // the type(dynamic) provided here is not actually used FYI it can be anything, but it MUST be injected using whatever you put here as a type argument
-            services.AddTransient(typeof(IPasswordHasher<dynamic>), typeof(DingoAuthentication.PasswordHasher<dynamic>));
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

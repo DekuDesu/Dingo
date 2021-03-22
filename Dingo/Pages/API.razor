@@ -1,0 +1,122 @@
+﻿@page "/API"
+
+@using DingoDataAccess.OAuth
+@using Microsoft.AspNetCore.Identity
+
+@inject IOAuthHandler oauthHandler
+@inject ILogger<API> logger
+@inject IPasswordHasher<IdentityUser> hasher
+
+<div class="alert alert-danger" role="alert">
+    <h3>
+        Warning
+    </h3>
+    This is your Dingo API OAuth key, any one with this key can use it to control your account or impersonate you.
+    <div class="row">
+        <ul class="list-group">
+            <li class="list-group-item">
+                Copy this key and keep it safe.
+            </li>
+            <li class="list-group-item">
+                Your key will only be shown once.
+            </li>
+            <li class="list-group-item">
+                Your key is never stored by Dingo and cannot be retrieved or recovered.
+            </li>
+            <li class="list-group-item">
+                Attempting to view your key again will automatically destroy the old one and create a new one.
+            </li>
+        </ul>
+    </div>
+</div>
+
+<div class="row rounded-3 border-primary my-3">
+    <div class="mb-3">
+        <h3>
+            OAuth API Key
+        </h3>
+        <div class="input-group">
+            <div class="input-group-text">
+                <span class="oi oi-key mx-1" title="key" aria-hidden="true"></span>
+            </div>
+            <input type=@OAuthType class="form-control" value=@OAuthValue>
+        </div>
+        <button type="submit" class=@ButtonClass @onclick=ShowOAuth>
+            <span class="oi oi-check" role="status" aria-hidden="true" style=@CheckStyle></span>
+            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style=@SpinnerStyle></span>
+            @ButtonText
+        </button>
+    </div>
+</div>
+
+@code {
+
+    [CascadingParameter(Name = "Id")]
+    protected string Id { get; set; }
+
+    private string OAuthType = "password";
+
+    private string OAuthValue = "********-****-****-****-***********";
+
+    private string SpinnerStyle = "display: none";
+    private string ButtonText = "Generate OAuth Key";
+    private string ButtonClass = "btn btn-primary my-2";
+    private string CheckStyle = "display: none";
+
+    private bool PreventInput = false;
+
+    private void UpdateButton(string text, bool complete, bool spinner)
+    {
+        SpinnerStyle = spinner ? "" : "display: none;";
+        ButtonText = text ?? "Change";
+        ButtonClass = complete ? "btn btn-success my-2" : "btn btn-primary my-2";
+        CheckStyle = complete ? "" : "display: none;";
+    }
+
+    private Task Wait(int ms = 500)
+    {
+        return Task.Run(() => System.Threading.Thread.Sleep(ms));
+    }
+
+    private async Task ShowOAuth()
+    {
+        if (PreventInput)
+        {
+            return;
+        }
+        PreventInput = true;
+
+        UpdateButton("Generating Key", false, true);
+
+        await Wait();
+
+        // we dont want the client to be able to dictate the oath string using timing attacks since OAuthValue is tied to the input element we shoud use a tmp variable instead of the more obvious OAuthValue
+        string tmp = Guid.NewGuid().ToString();
+
+        OAuthValue = tmp;
+        OAuthType = "text";
+
+        // hash the OAuth since we dont store this in plain text
+        tmp = hasher.HashPassword(null, tmp);
+
+        if (string.IsNullOrEmpty(await oauthHandler.GetOAuth(Id)))
+        {
+            await oauthHandler.SetOAuth(Id, tmp);
+        }
+        else
+        {
+            await oauthHandler.UpdateOAuth(Id, tmp);
+        }
+
+        UpdateButton("Generate New Key", true, false);
+
+        PreventInput = false;
+
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+        logger.LogInformation("Initialized Component {ComponentName} Params: {Param1}:{Param1Value}", nameof(API), nameof(Id), Id);
+    }
+}

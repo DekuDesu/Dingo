@@ -10,20 +10,27 @@ namespace DingoDataAccess.Account
     public class AccountHandler : IAccountHandler
     {
         private readonly ISqlDataAccess db;
+        private readonly ISqlDataAccess messagesDb;
         private readonly ILogger<AccountHandler> logger;
         private readonly IDisplayNameHandler displayNameHandler;
 
         private const string ConnectionStringName = "DingoUsersConnection";
+        private const string MessagesConnectionStringName = "DingoMessagesConnection";
 
         private const string CreateNewUserProcedure = "CreateNewUser";
         private const string DeleteUserProcedure = "DeleteUser";
 
-        public AccountHandler(ISqlDataAccess _db, ILogger<AccountHandler> _logger, IDisplayNameHandler _displayNameHandler)
+        private const string MessagesCreateNewUserProcedure = "CreateUser";
+        private const string MessagesDeleteUserProcedure = "DeleteUser";
+
+        public AccountHandler(ISqlDataAccess _db, ISqlDataAccess _messagesDb, ILogger<AccountHandler> _logger, IDisplayNameHandler _displayNameHandler)
         {
             db = _db;
+            messagesDb = _messagesDb;
             logger = _logger;
             displayNameHandler = _displayNameHandler;
             db.ConnectionStringName = ConnectionStringName;
+            messagesDb.ConnectionStringName = MessagesConnectionStringName;
         }
 
         /// <summary>
@@ -59,6 +66,8 @@ namespace DingoDataAccess.Account
             // create the friends list, blocked list, and request list for the user
             await db.ExecuteVoidProcedure(CreateNewUserProcedure, new { Id });
 
+            await messagesDb.ExecuteVoidProcedure(MessagesCreateNewUserProcedure, new { Id });
+
             logger.LogInformation("Finished creating new user {DisplayName}#{result} {Id}", DisplayName, result, Id);
 
             return true;
@@ -73,6 +82,8 @@ namespace DingoDataAccess.Account
             }
 
             await db.ExecuteVoidProcedure(DeleteUserProcedure, new { Id });
+
+            await messagesDb.ExecuteVoidProcedure(MessagesDeleteUserProcedure, new { Id });
 
             logger.LogInformation("Deleted account for {Id}", Id);
 
