@@ -4,6 +4,8 @@
 @inject IFriendListHandler friendlistHandler
 @inject IFriendHandler friendHandler
 
+@implements IDisposable
+
 <table class="table table-striped border rounded table-hover">
     <tbody>
         @foreach (var item in Requests)
@@ -19,6 +21,10 @@
 
     private List<IFriendModel> Requests { get; set; } = new();
 
+    private int RefreshPollingRate = 15_000;
+
+    private System.Timers.Timer RefreshTimer = new();
+
     protected override async Task OnInitializedAsync()
     {
         await GetRequests();
@@ -26,6 +32,11 @@
         await base.OnInitializedAsync();
 
         logger.LogInformation("Initialized Component {ComponentName} Params: {Param1}:{Param1Value}", nameof(ViewRequests), nameof(Id), Id);
+
+        RefreshTimer.Elapsed += async (x, y) => await GetRequests();
+        RefreshTimer.Interval = RefreshPollingRate;
+        RefreshTimer.AutoReset = true;
+        RefreshTimer.Start();
     }
 
     private async Task GetRequests()
@@ -34,11 +45,18 @@
 
         Requests = await friendHandler.GetRequests(Id);
 
-        logger.LogInformation("Found request list for {Id} {Count}", Id, Requests.Count);
+        await InvokeAsync(() => StateHasChanged());
     }
 
     private void StateHasChangedCallback()
     {
         StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        RefreshTimer?.Stop();
+        RefreshTimer?.Close();
+        RefreshTimer?.Dispose();
     }
 }

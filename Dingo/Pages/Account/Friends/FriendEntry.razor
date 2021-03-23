@@ -26,7 +26,7 @@
         <div class="row" style="text-align: left;">
             <div class="col">
                 <small>@GetStatusName()</small>
-                <button class="btn btn-outline-primary mx-4">
+                <button class="btn btn-outline-primary mx-4" @onclick=MessageFriend>
                     <span class="oi oi-chat" title="chat" aria-hidden="true"></span>
                 </button>
             </div>
@@ -57,6 +57,9 @@
 
     [CascadingParameter]
     protected Action toastCallback { get; set; }
+
+    [CascadingParameter(Name = "messageCallbackReference")]
+    MessageCallbackReference messageCallbackReference { get; set; }
 
     [Parameter]
     public string Id { get; set; }
@@ -96,6 +99,12 @@
         await base.OnInitializedAsync();
 
         logger.LogInformation("Initialized Component {ComponentName} Params: {Param1}:{Param1Value} {Param2}:{Param2Value} {Param3}:{Param3Value} {Param4}:{Param4Value}", nameof(FriendEntry), nameof(Id), Id, nameof(Friend), Friend, nameof(toasts), toasts, nameof(toastCallback), toastCallback);
+    }
+
+    private async Task MessageFriend()
+    {
+        messageCallbackReference.FriendId = Friend.Id;
+        await messageCallbackReference.Callback?.Invoke();
     }
 
     private string GetStatusName()

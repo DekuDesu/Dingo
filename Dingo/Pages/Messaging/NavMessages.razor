@@ -3,6 +3,8 @@
 @inject ILogger<NavMessages> logger
 @inject IFriendHandler friendHandler
 
+@implements IDisposable
+
 @using DingoDataAccess.Models.Friends
 
 @foreach (var item in Messages)
@@ -15,6 +17,10 @@
     protected string Id { get; set; }
 
     List<IFriendModel> Messages = new();
+
+    private int MessagePollingRate = 15_000;
+
+    System.Timers.Timer CheckForMessagesTimer = new();
 
     private async Task LoadMessages()
     {
@@ -38,7 +44,21 @@
     protected override async Task OnInitializedAsync()
     {
         await base.OnInitializedAsync();
+
         logger.LogInformation("Initialized Component {ComponentName} Params: {Param1}:{Param1Value}", nameof(NavMessages), nameof(Id), Id);
+
         await LoadMessages();
+
+        CheckForMessagesTimer.Elapsed += async (x, y) => await LoadMessages();
+        CheckForMessagesTimer.Interval = MessagePollingRate;
+        CheckForMessagesTimer.AutoReset = true;
+        CheckForMessagesTimer.Start();
+    }
+
+    public void Dispose()
+    {
+        CheckForMessagesTimer?.Stop();
+        CheckForMessagesTimer?.Close();
+        CheckForMessagesTimer?.Dispose();
     }
 }

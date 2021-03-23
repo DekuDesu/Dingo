@@ -4,6 +4,8 @@
 @inject IFriendListHandler friendlistHandler
 @inject IFriendHandler friendHandler
 
+@implements IDisposable
+
 <table class="table table-striped border rounded table-hover">
     <tbody>
         @foreach (var item in Friends)
@@ -17,34 +19,47 @@
     [Parameter]
     public string Id { get; set; }
 
-    private List<IFriendModel> Friends { get; set; } = new();
+private List<IFriendModel> Friends { get; set; } = new();
 
-    protected override async Task OnParametersSetAsync()
-    {
+private int RefreshPollingRate = 15_000;
 
-        await base.OnParametersSetAsync();
-    }
+private System.Timers.Timer RefreshTimer = new();
 
-    protected override async Task OnInitializedAsync()
-    {
-        await GetFriends();
+protected override async Task OnParametersSetAsync()
+{
 
-        await base.OnInitializedAsync();
+    await base.OnParametersSetAsync();
+}
 
-        logger.LogInformation("Initialized Component {ComponentName} Params: {Param1}:{Param1Value}", nameof(DisplayFriends), nameof(Id), Id);
-    }
+protected override async Task OnInitializedAsync()
+{
+    await GetFriends();
 
-    private async Task GetFriends()
-    {
-        logger.LogInformation("Fetching friends list for {Id}", Id);
+    await base.OnInitializedAsync();
 
-        Friends = await friendHandler.GetFriendList(Id);
+    logger.LogInformation("Initialized Component {ComponentName} Params: {Param1}:{Param1Value}", nameof(DisplayFriends), nameof(Id), Id);
 
-        logger.LogInformation("Found friends list for {Id} {Count}", Id, Friends.Count);
-    }
+    RefreshTimer.Interval = RefreshPollingRate;
+    RefreshTimer.AutoReset = true;
+    RefreshTimer.Elapsed += async (x, y) => await GetFriends();
+    RefreshTimer.Start();
+}
 
-    private void StateChangedCallback()
-    {
-        StateHasChanged();
-    }
+private async Task GetFriends()
+{
+    Friends = await friendHandler.GetFriendList(Id);
+    await InvokeAsync(() => StateHasChanged());
+}
+
+private void StateChangedCallback()
+{
+    StateHasChanged();
+}
+
+public void Dispose()
+{
+    RefreshTimer?.Stop();
+    RefreshTimer?.Close();
+    RefreshTimer?.Dispose();
+}
 }

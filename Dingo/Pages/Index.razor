@@ -14,6 +14,8 @@
     [CascadingParameter(Name = "Id")]
     public string Id { get; set; }
 
+    private string PreviousFriendId = "-1";
+
     public List<ToastModel> toasts = new();
 
     public void ToastStateChange()
@@ -33,11 +35,6 @@
         await InvokeAsync(() => StateHasChanged());
     }
 
-    protected override async Task OnParametersSetAsync()
-    {
-        await base.OnParametersSetAsync();
-    }
-
     protected override async Task OnInitializedAsync()
     {
         await base.OnInitializedAsync();
@@ -52,7 +49,15 @@
         <CascadingValue Value=@ToastStateChange TValue=Action>
             @if (string.IsNullOrEmpty(messageCallbackReference.FriendId) is false)
             {
-                <Dingo.Pages.Messaging.Message FriendId=@messageCallbackReference.FriendId />
+                if (messageCallbackReference.FriendId != PreviousFriendId)
+                {
+                    PreviousFriendId = messageCallbackReference.FriendId;
+                    <Dingo.Pages.Messaging.Message FriendId=@messageCallbackReference.FriendId />
+                }
+                else
+                {
+                    <Dingo.Pages.Messaging.Message FriendId=@messageCallbackReference.FriendId />
+                }
             }
             else
             {
