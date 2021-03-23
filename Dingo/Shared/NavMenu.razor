@@ -97,12 +97,25 @@
         await base.OnInitializedAsync();
 
         logger.LogInformation("Initialized Component {ComponentName} Params: {Param1}:{Param1Value} {Param2}:{Param2Value} {Param3}:{Param3Value}", nameof(NavMenu), nameof(Id), Id, nameof(DisplayName), DisplayName, nameof(MyFriendInfo), MyFriendInfo);
+
+        // attack a callback to the message call back, this make it so when we view a message it hides the nav menu
+        messageCallbackReference.Callback += HideNavMenu;
     }
 
     private async Task ResetMessageCallbackReference()
     {
         messageCallbackReference.FriendId = string.Empty;
+
+        collapseNavMenu = true;
+
         await messageCallbackReference.Callback?.Invoke();
+    }
+
+    private async Task HideNavMenu()
+    {
+        collapseNavMenu = true;
+
+        await InvokeAsync(() => StateHasChanged());
     }
 
     private void ToggleNavMenu()

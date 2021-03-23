@@ -1,16 +1,40 @@
 ﻿@inject ILogger<ManageFriends> logger
 
-<div class="row">
-    @foreach (var button in Buttons)
-    {
-        <div class="col-md-3">
-            <div class="row">
-                <button class=@(button.selected ? "btn btn-primary text-nowrap" : "btn btn-outline-primary text-nowrap") @onclick=@button.OnClick>
-                    @button.Text
-                </button>
-            </div>
-        </div>
-    }
+<div class="d-flex justify-content-center">
+    <div class="input-group" style="width: auto;">
+        <button class=@(selectedButton == 0 ? SelectedClass : DefaultClass) @onclick=SelectButton0 type="button">
+            <span class="d-none d-md-block">
+                Friends
+            </span>
+            <span class="d-md-none">
+                <span class="oi oi-people" title="Friends" aria-hidden="true"></span>
+            </span>
+        </button>
+        <button class=@(selectedButton == 1 ? SelectedClass : DefaultClass) @onclick=SelectButton1 type="button">
+            <span class="d-none d-md-block">
+                Add Friend
+            </span>
+            <span class="d-md-none">
+                <span class="oi oi-plus" title="Add Friend" aria-hidden="true"></span>
+            </span>
+        </button>
+        <button class=@(selectedButton == 2 ? SelectedClass : DefaultClass) @onclick=SelectButton2 type="button">
+            <span class="d-none d-md-block">
+                Requests
+            </span>
+            <span class="d-md-none">
+                <span class="oi oi-bell" title="View Friend Requests" aria-hidden="true"></span>
+            </span>
+        </button>
+        <button class=@(selectedButton == 3 ? SelectedClass : DefaultClass) @onclick=SelectButton3 type="button">
+            <span class="d-none d-md-block">
+                Blocked
+            </span>
+            <span class="d-md-none">
+                <span class="oi oi-ban" title="View Blocked" aria-hidden="true"></span>
+            </span>
+        </button>
+    </div>
 </div>
 <div class="row my-2">
     @switch (selectedButton)
@@ -37,9 +61,17 @@
     [Parameter]
     public string DisplayName { get; set; }
 
+    private const string SelectedClass = "btn btn-primary text-nowrap";
+    private const string DefaultClass = "btn btn-outline-primary text-nowrap";
+
     private List<(string Text, bool selected, Action OnClick)> Buttons = new();
 
     private int selectedButton = 0;
+
+    private void SelectButton0() => SelectButton(0);
+    private void SelectButton1() => SelectButton(1);
+    private void SelectButton2() => SelectButton(2);
+    private void SelectButton3() => SelectButton(3);
 
     private void SelectButton(int index)
     {

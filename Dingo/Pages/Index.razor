@@ -43,7 +43,7 @@
         await base.OnInitializedAsync();
 
         // setup the callback that is called when the usere clicks an unread message.
-        messageCallbackReference.Callback = ViewMessageCallback;
+        messageCallbackReference.Callback += ViewMessageCallback;
     }
 }
 
