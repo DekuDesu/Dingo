@@ -83,7 +83,10 @@ namespace DingoDataAccess
                 newExpirationTimer.Elapsed += async (x, y) =>
                 {
                     await DecacheKey(key);
-                    ExpirationTimers.Remove((newExpirationTimer, key));
+                    if (ExpirationTimers.Contains((newExpirationTimer, key)))
+                    {
+                        ExpirationTimers.Remove((newExpirationTimer, key));
+                    }
                     newExpirationTimer?.Close();
                     newExpirationTimer?.Dispose();
                 };

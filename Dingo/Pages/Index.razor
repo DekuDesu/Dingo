@@ -23,9 +23,15 @@
     }
 
     [CascadingParameter]
-    protected Task<AuthenticationState>
-            AuthStat
-    { get; set; }
+    protected Task<AuthenticationState> AuthStat { get; set; }
+
+    [CascadingParameter(Name = "messageCallbackReference")]
+    protected MessageCallbackReference messageCallbackReference { get; set; }
+
+    private async Task ViewMessageCallback()
+    {
+        await InvokeAsync(() => StateHasChanged());
+    }
 
     protected override async Task OnParametersSetAsync()
     {
@@ -35,15 +41,25 @@
     protected override async Task OnInitializedAsync()
     {
         await base.OnInitializedAsync();
+
+        // setup the callback that is called when the usere clicks an unread message.
+        messageCallbackReference.Callback = ViewMessageCallback;
     }
 }
 
 <AuthorizeView>
     <CascadingValue Value=@toasts>
         <CascadingValue Value=@ToastStateChange TValue=Action>
-            <div class="col-lg-6 col-md-10 col-xs-12">
-                <Dingo.Pages.Account.ManageFriends Id=@Id />
-            </div>
+            @if (string.IsNullOrEmpty(messageCallbackReference.FriendId) is false)
+            {
+                <Dingo.Pages.Messaging.Message FriendId=@messageCallbackReference.FriendId />
+            }
+            else
+            {
+                <div class="col-lg-6 col-md-10 col-xs-12">
+                    <Dingo.Pages.Account.ManageFriends Id=@Id />
+                </div>
+            }
             <Dingo.Pages.Components.Toasts toasts=@toasts />
         </CascadingValue>
     </CascadingValue>

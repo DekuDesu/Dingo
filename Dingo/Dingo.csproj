@@ -30,8 +30,4 @@
 		<ProjectReference Include="..\DingoAuthentication\DingoAuthentication.csproj" />
 	</ItemGroup>
 
-	<ItemGroup>
-		<Folder Include="wwwroot\javascript\" />
-	</ItemGroup>
-
 </Project>

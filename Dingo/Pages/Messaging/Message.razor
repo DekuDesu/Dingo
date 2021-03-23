@@ -1,22 +1,210 @@
-﻿@page "/message"
-
-@using Dingo.Data.GeneralModels
+﻿@page "/Message"
 
 @inject ILogger<Message> logger
+@using System.ComponentModel.DataAnnotations;
+@using DingoDataAccess.Models.Friends
+@inject IJSRuntime js
 
-<h1>Friend Finder</h1>
+@inject IMessageHandler messageHandler
+@inject IFriendHandler friendHandler
 
-<EditForm @bind-model="searchTerm">
-    <h4>Find a Friend</h4>
-    <input @bind-value="searchTerm.Term" />
-    <button class="btn btn-outline-primary" @onclick="SubmitSearch">Search</button>
-</EditForm>
+<h1 class="flex">
+    Message @(Friend?.DisplayName ?? "Loading...")<span style="color:grey;">#@(Friend?.UniqueIdentifier ?? 0000)</span>
+</h1>
+<div @ref=ChatBox class="d-flex flex-column list-group-flush overflow-auto" style="height: 85vh;" id="exmaple">
+    @foreach (var item in Messages)
+    {
+        <div class="list-group-item list-group-item-action shadow-sm my-2">
+            <div class="d-flex">
+                <img src=@(Friend.AvatarPath ?? "/Images/DefaultAvatar.png") class="rounded-circle flex my-auto" height="40" />
+                <div class="mx-1 flex-fill">
+                    <div>
+                        <span class="fw-bold">@item.DisplayName</span><span style="color: grey;">#@item.UniqueIdentifier</span>
+                    </div>
+                    <div>
+                        <span style="color: darkgray;">@item.TimeSent</span>
+                        @if (item.ShowSpinner)
+                        {
+                            <div class="spinner-border spinner-border-sm text-success mx-1" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        }
+                        @if (item.ShowCheck)
+                        {
+                            <span class="oi oi-circle-check mx-1" title="circle check" aria-hidden="true"></span>
+                        }
+                    </div>
+                </div>
+            </div>
+            <div class="text-wrap">
+                @item.Message
+            </div>
+        </div>
+    }
+</div>
+<div class="flex">
+    <EditForm Model="@InputValue" OnValidSubmit=@Submit>
+        <div class="input-group mb-3">
+            <InputText class="form-control" placeholder=@PlaceholderText aria-label="Message" @bind-Value=@InputValue.Value>
+
+            </InputText>
+            <!--
+            <button class="btn btn-outline-secondary px-1" type="submit">
+                <span class="oi oi-folder mx-1" title="Attach File" aria-hidden="true"></span>
+            </button>
+            <button class="btn btn-outline-secondary px-1" type="submit">
+                <span class="oi oi-image mx-1" title="Attach Image" aria-hidden="true"></span>
+            </button>
+                -->
+            <button class="btn btn-primary px-4" type="submit">
+                <span class="oi oi-chat mx-1" title="Send Message" aria-hidden="true"></span>
+            </button>
+        </div>
+    </EditForm>
+</div>
 
 @code {
-    private SingleSearchTermModel searchTerm = new();
-    private void SubmitSearch()
-    {
-        logger.LogInformation("Searched for Friend: {FriendUserName}", searchTerm.Term);
 
+
+    [CascadingParameter(Name = "Id")]
+    protected string Id { get; set; }
+
+    [Parameter]
+    public string FriendId { get; set; }
+
+    public IFriendModel Friend { get; set; }
+
+    List<IMessageModel> RawMessages = new();
+    private List<MessageState> Messages = new();
+
+    private ElementReference ChatBox;
+
+    private string PlaceholderText => $"Message @ {Friend?.DisplayName ?? "Loading..."}#{Friend?.UniqueIdentifier ?? 0}";
+
+    private FormModel InputValue = new();
+
+    private bool BlockInput = false;
+
+    private async Task ScrollToBottomOfChatbox()
+    {
+        await js.InvokeVoidAsync("scrollToBottom", ChatBox);
+    }
+
+    private async Task Submit()
+    {
+        if (BlockInput)
+        {
+            return;
+        }
+
+        BlockInput = true;
+
+        if (string.IsNullOrEmpty(InputValue.Value))
+        {
+            BlockInput = false;
+            return;
+        }
+
+        await Dingo.Helpers.Sleep(100);
+
+        Messages.Add(new()
+        {
+            DisplayName = "friutypnch",
+            ShowSpinner = true,
+            Message = InputValue.Value,
+            ShowCheck = false,
+            TimeSent = DateTime.Now,
+            UniqueIdentifier = 1234
+        });
+
+        await ScrollToBottomOfChatbox();
+
+        logger.LogInformation("Message {Message}", InputValue.Value);
+
+        InputValue.Value = "";
+
+        BlockInput = false;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+        logger.LogInformation("Initialized Component {ComponentName} Params: {Param1}:{Param1Value}", nameof(Message), nameof(Id), Id);
+        //Messages = new()
+        //{
+        //        new()
+        //        {
+        //            DisplayName = "friutypnch",
+        //            ShowSpinner = true,
+        //            Message = "Test message",
+        //            ShowCheck = false,
+        //            TimeSent = DateTime.Now,
+        //            UniqueIdentifier = 1234
+        //        },
+        //        new()
+        //        {
+        //            DisplayName = "DekuDesu",
+        //            ShowSpinner = false,
+        //            Message = "Another test Message",
+        //            ShowCheck = true,
+        //            TimeSent = DateTime.Now,
+        //            UniqueIdentifier = 2525
+        //        }
+        //    };
+        await LoadMessages();
+    }
+
+    private async Task LoadMessages()
+    {
+        List<IMessageModel> messages = await messageHandler.GetMessages(Id);
+
+        // only get messages from this friend
+        foreach (var item in messages.Where(x => x.SenderId == FriendId))
+        {
+            if (RawMessages.Contains(item) is false)
+            {
+                RawMessages.Add(item);
+            }
+        }
+
+        await RedrawMessages();
+    }
+
+    private async Task RedrawMessages()
+    {
+        Friend ??= await friendHandler.GetFriend(FriendId);
+
+        foreach (var item in RawMessages)
+        {
+            if (Friend is not null)
+            {
+                Messages.Add(
+                    new()
+                    {
+                        DisplayName = Friend.DisplayName,
+                        ShowSpinner = false,
+                        Message = item.Message,
+                        ShowCheck = false,
+                        TimeSent = item.TimeSent,
+                        UniqueIdentifier = Friend.UniqueIdentifier
+                    }
+                );
+            }
+        }
+    }
+
+    private class FormModel
+    {
+        public string Value { get; set; }
+    }
+
+    private class MessageState
+    {
+        public string DisplayName { get; set; }
+        public short UniqueIdentifier { get; set; }
+        public string Message { get; set; }
+        public bool ShowSpinner { get; set; } = false;
+        public bool ShowCheck { get; set; } = false;
+        public DateTime TimeSent { get; set; }
     }
 }

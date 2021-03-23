@@ -10,7 +10,9 @@
     <CascadingValue Value=@Id Name="Id">
         <CascadingValue Value=@DisplayName Name="DisplayName">
             <CascadingValue Value=@MyFriendInfo Name="MyFriendInfo">
-                <NavMenu />
+                <CascadingValue Value=@messageCallbackReference Name="messageCallbackReference">
+                    <NavMenu />
+                </CascadingValue>
             </CascadingValue>
         </CascadingValue>
     </CascadingValue>
@@ -21,7 +23,9 @@
         <CascadingValue Value=@Id Name="Id">
             <CascadingValue Value=@DisplayName Name="DisplayName">
                 <CascadingValue Value=@MyFriendInfo Name="MyFriendInfo">
-                    @Body
+                    <CascadingValue Value=@messageCallbackReference Name="messageCallbackReference">
+                        @Body
+                    </CascadingValue>
                 </CascadingValue>
             </CascadingValue>
         </CascadingValue>
@@ -37,6 +41,9 @@
 
     [Parameter]
     public IFriendModel MyFriendInfo { get; set; }
+
+    [Parameter]
+    public MessageCallbackReference messageCallbackReference { get; set; } = new();
 
     [CascadingParameter]
     protected Task<AuthenticationState> AuthStat { get; set; }

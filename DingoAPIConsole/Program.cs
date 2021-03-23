@@ -25,7 +25,7 @@ namespace DingoAuthentication.Tests
         private static ISymmetricHandler<EncryptedDataModel> symmetricHandler = new SymmetricHandler<EncryptedDataModel>(smLogger);
         private static ISignatureHandler signatureHandler = new SignatureHandler(new TmpLogger<SignatureHandler>());
         private static string TestingAccountId = "f80a8358-3e27-4daa-9389-9c9462b6620c";
-        private static string OAuthTestingKey = "353b5e3f-8040-4209-ab4e-59884709e914";
+        private static string OAuthTestingKey = "041118e3-fb19-4c19-ae4d-c97e5fc1b437";
 
         public static async Task Main()
         {

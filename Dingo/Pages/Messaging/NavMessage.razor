@@ -1,18 +1,15 @@
 ﻿@using DingoDataAccess.Models.Friends
 
 <li class="nav-item px-3">
-    <div class="btn btn-primary w-100">
+    <div class="btn btn-primary w-100" @onclick=Click>
         <div class="position-relative w-100">
             <div class="text-wrap" style="max-width: 250px; color: white; font-weight: 500;">
+                <span class="oi oi-chat"></span>
                 @(Friend?.DisplayName ?? "Loading")
                 <span style="color: grey; font-size: 1em;">
                     #@(Friend?.UniqueIdentifier.ToString() ?? "Loading")
                 </span>
             </div>
-            @if (UnreadMessage)
-            {
-                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"><span class="oi oi-chat" title="Chat"></span><span class="visually-hidden">unread messages</span></span>
-            }
         </div>
     </div>
 </li>
@@ -24,5 +21,15 @@
     [Parameter]
     public IFriendModel Friend { get; set; }
 
-    private bool UnreadMessage = false;
+    [Parameter]
+    public bool UnreadMessage { get; set; } = true;
+
+    [CascadingParameter(Name = "messageCallbackReference")]
+    protected MessageCallbackReference messageCallbackReference { get; set; }
+
+    private async Task Click()
+    {
+        messageCallbackReference.FriendId = Friend.Id;
+        await messageCallbackReference.Callback?.Invoke();
+    }
 }

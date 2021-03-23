@@ -1,9 +1,44 @@
 ﻿
-@for (int i = 0; i < 20; i++)
+@inject IMessageHandler messageHandler
+@inject ILogger<NavMessages> logger
+@inject IFriendHandler friendHandler
+
+@using DingoDataAccess.Models.Friends
+
+@foreach (var item in Messages)
 {
-    <NavMessage />
+    <NavMessage Friend=@item />
 }
 
 @code {
+    [CascadingParameter(Name = "Id")]
+    protected string Id { get; set; }
 
+    List<IFriendModel> Messages = new();
+
+    private async Task LoadMessages()
+    {
+        await Dingo.Helpers.Sleep(100);
+
+        Messages.Clear();
+
+        List<IMessageModel> waitingMessages = await messageHandler.GetMessages(Id);
+
+        if (waitingMessages is null)
+        {
+            return;
+        }
+
+        foreach (var item in waitingMessages)
+        {
+            Messages.Add(await friendHandler.GetFriend(item.SenderId));
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+        logger.LogInformation("Initialized Component {ComponentName} Params: {Param1}:{Param1Value}", nameof(NavMessages), nameof(Id), Id);
+        await LoadMessages();
+    }
 }

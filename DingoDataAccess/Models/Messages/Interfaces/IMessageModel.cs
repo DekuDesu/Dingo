@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace DingoDataAccess.Models
+namespace DingoDataAccess
 {
     public interface IMessageModel
     {
