@@ -9,7 +9,7 @@
 @inject IStatusHandler statusHandler
 
 <div class="top-row pl-4 navbar navbar-dark">
-    <a class="navbar-brand mx-4" href="">
+    <a class="navbar-brand mx-4" href="" @onclick=ResetMessageCallbackReference>
         <img src="/Images/Dingo256.png" class="" height="50" width="50" /> Dingo
     </a>
     <button class="navbar-toggler" @onclick="ToggleNavMenu">
@@ -85,6 +85,9 @@
     [CascadingParameter(Name = "MyFriendInfo")]
     public IFriendModel MyFriendInfo { get; set; }
 
+    [CascadingParameter(Name = "messageCallbackReference")]
+    protected MessageCallbackReference messageCallbackReference { get; set; }
+
     private bool collapseNavMenu = true;
 
     private string NavMenuCssClass => collapseNavMenu ? "collapse" : null;
@@ -94,6 +97,12 @@
         await base.OnInitializedAsync();
 
         logger.LogInformation("Initialized Component {ComponentName} Params: {Param1}:{Param1Value} {Param2}:{Param2Value} {Param3}:{Param3Value}", nameof(NavMenu), nameof(Id), Id, nameof(DisplayName), DisplayName, nameof(MyFriendInfo), MyFriendInfo);
+    }
+
+    private async Task ResetMessageCallbackReference()
+    {
+        messageCallbackReference.FriendId = string.Empty;
+        await messageCallbackReference.Callback?.Invoke();
     }
 
     private void ToggleNavMenu()

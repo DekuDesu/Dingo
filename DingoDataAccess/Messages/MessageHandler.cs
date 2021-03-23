@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace DingoDataAccess
 {
-    public class MessageHandler
+    public class MessageHandler : IMessageHandler
     {
         private readonly ISqlDataAccess db;
         private readonly ILogger<MessageHandler> logger;
@@ -39,20 +39,12 @@ namespace DingoDataAccess
 
             try
             {
-                // serialize the message
-                string message = Newtonsoft.Json.JsonConvert.SerializeObject(Message);
-
-                // get the messages for the recipient
-                List<string> messages;
-
-                var result = await db.ExecuteSingleProcedure<string, dynamic>(GetMessagesProcedure, new { Id = RecipientId });
-
-                messages = Newtonsoft.Json.JsonConvert.DeserializeObject<List<string>>(result);
+                List<IMessageModel> messages = await GetMessages(RecipientId);
 
                 // add the message
-                if (messages.Contains(message) is false)
+                if (messages.Contains(Message) is false)
                 {
-                    messages.Add(message);
+                    messages.Add(Message);
                 }
 
                 // save the messages
@@ -71,32 +63,21 @@ namespace DingoDataAccess
         {
             if (Helpers.FullVerifyGuid(ref Id, logger) is false)
             {
-                return null;
+                return new();
             }
 
             try
             {
                 // get the messages for the recipient
-                List<string> serializedMessages;
+                List<IMessageModel> messages = new();
 
                 var result = await db.ExecuteSingleProcedure<string, dynamic>(GetMessagesProcedure, new { Id });
 
-                serializedMessages = Newtonsoft.Json.JsonConvert.DeserializeObject<List<string>>(result);
+                var tmp = Newtonsoft.Json.JsonConvert.DeserializeObject<List<MessageModel>>(result);
 
-
-                List<IMessageModel> messages = new();
-
-                foreach (var item in serializedMessages)
+                foreach (var item in tmp)
                 {
-                    try
-                    {
-                        IMessageModel message = Newtonsoft.Json.JsonConvert.DeserializeObject<MessageModel>(item);
-                        messages.Add(message);
-                    }
-                    catch
-                    {
-                        logger.LogWarning("Failed to deserialize message");
-                    }
+                    messages.Add(item);
                 }
 
                 return messages;
@@ -104,7 +85,7 @@ namespace DingoDataAccess
             catch (Exception e)
             {
                 logger.LogError("Failed to get messages for {SenderId} Error: {Error}", Id, e);
-                return null;
+                return new();
             }
         }
     }
