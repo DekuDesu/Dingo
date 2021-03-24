@@ -1,6 +1,12 @@
 ﻿@inject IFriendHandler friendHandler
 @inject ILogger<RequestEntry> logger
 
+@using DingoAuthentication.Encryption
+
+@inject IEncryptedClientStateHandler encryptionStateHandler
+@inject IEncryptionClient<EncryptedDataModel> encryptionClient
+@inject IKeyAndBundleHandler<KeyBundleModel> bundleHandler
+
 @using DingoDataAccess.Models.Friends
 
 <tr scope="row">
@@ -105,6 +111,76 @@
         return Task.Run(() => System.Threading.Thread.Sleep(500));
     }
 
+    private async Task CreateAndAddBundle()
+    {
+        // when we accept a request we need to create a new bundle and send it to the other party, the other party generated their bundle when they sent the request
+        // import our identity keys
+        var keys = await bundleHandler.GetKeys(Id);
+
+        if (keys.X509IdentityKey != null && keys.IdentityPrivateKey != null)
+        {
+            // generate a new bundle and save it to the server
+            IKeyBundleModel bundle = encryptionClient.GenerateBundle(keys.X509IdentityKey, keys.IdentityPrivateKey);
+
+            if (bundle is KeyBundleModel b)
+            {
+                // add OUR bundle to THIER bundles
+                await bundleHandler.SetBundle(friend.Id, Id, b);
+            }
+
+            // since the other party already generated the bundle we can create the secret and save the state of our encryption client
+
+            IKeyBundleModel otherPartiesBundle = await bundleHandler.GetBundle(Id, friend.Id);
+
+            if (bundle != null)
+            {
+                if (encryptionClient.CreateSecretUsingBundle(otherPartiesBundle))
+                {
+                    // if we were able to sucessfully create a secret save our encryption state and remove the budle from our bundles
+                    string clientState = encryptionClient.ExportState();
+
+                    if (await encryptionStateHandler.SetState(Id, friend.Id, clientState))
+                    {
+                        // since we saved the state of our encryption client we can delete the bundle from the server
+                        if (await bundleHandler.RemoveBundle(Id, friend.Id))
+                        {
+                            logger.LogInformation("Sucessfully created secret and removed bundle from server for {Id}", Id);
+                        }
+                        else
+                        {
+                            logger.LogError("Failed to remove bundle for friend {FriendId} for {Id}", friend.Id, Id);
+                        }
+                    }
+                    else
+                    {
+                        logger.LogError("Failed to set encryption client state for {Id}", Id);
+                    }
+                }
+                else
+                {
+                    logger.LogError("Failed to create secret using Bundle for {Id}", Id);
+                }
+            }
+            else
+            {
+                logger.LogError("Failed to retrieve bundle for other party for {Id}", Id);
+            }
+        }
+        else
+        {
+            logger.LogError("Failed to {MethodName} for {Id} no keys retrieved from bundle handler", nameof(CreateAndAddBundle), Id);
+        }
+    }
+
+    private async Task IgnoreBundle()
+    {
+        // since we don't want to accept a request we should remove the bundle from our bundle list since we aren't going to use it
+        if (await bundleHandler.RemoveBundle(Id, friend.Id))
+        {
+            logger.LogInformation("Removed {FriendId} bundle for {Id}", friend.Id, Id);
+        }
+    }
+
     private async Task AcceptRequest()
     {
         if (BlockInput)
@@ -115,6 +191,9 @@
         ShowSpinner = 0;
 
         await Wait();
+
+        // create a shared secret and send our key bundle to the other party so we can chat
+        await CreateAndAddBundle();
 
         // add the other person to our friendslist
         await friendHandler.AddFriend(Id, friend.Id);
@@ -146,6 +225,9 @@
 
         await Wait();
 
+        // remove their encryption key bundle from our bundle list since we aren't going to use it
+        await IgnoreBundle();
+
         // remove them from our request list
         await friendHandler.RemoveRequest(Id, friend.Id);
 
@@ -158,16 +240,21 @@
         // notify our parent component that we have changed and it should re-draw the request list
         StateHasChangedCallback?.Invoke();
     }
+
     private async Task BlockRequest()
     {
         if (BlockInput)
         {
             return;
         }
+
         BlockInput = true;
         ShowSpinner = 2;
 
         await Wait();
+
+        // remove their encryption key bundle from our bundle list since we aren't going to use it
+        await IgnoreBundle();
 
         await friendHandler.BlockFriend(Id, friend.Id);
 

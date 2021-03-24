@@ -8,6 +8,13 @@
 @inject IDisplayNameHandler displayNameHander
 @inject IValidator<DisplayNameModel> searchValidator
 
+@using DingoAuthentication.Encryption
+
+@inject IEncryptedClientStateHandler encryptionStateHandler
+@inject IEncryptionClient<EncryptedDataModel> encryptionClient
+@inject IKeyAndBundleHandler<KeyBundleModel> bundleHandler
+
+
 <EditForm Context="User" @bind-model="displayName" OnValidSubmit="@Submit">
     <div class="row">
         <h2>Add Friend</h2>
@@ -87,6 +94,44 @@
         };
     }
 
+    private async Task CreateAndSendBundle(string FriendId)
+    {
+        // since we are sending a request we should create a key bundle for the other party to use to create a shared secret between us
+        // when we accept a request we need to create a new bundle and send it to the other party, the other party generated their bundle when they sent the request
+
+        // import our identity keys
+        var keys = await bundleHandler.GetKeys(Id);
+
+        if (keys.X509IdentityKey != null && keys.IdentityPrivateKey != null)
+        {
+            // generate a new bundle and save it to the server
+            IKeyBundleModel bundle = encryptionClient.GenerateBundle(keys.X509IdentityKey, keys.IdentityPrivateKey);
+
+            if (bundle is KeyBundleModel b)
+            {
+                // add OUR bundle to THIER bundles
+                await bundleHandler.SetBundle(FriendId, Id, b);
+            }
+
+            // save the state of our encryption client so we can create a secret later when we get the other persons bundle should they want to be friends
+
+            string clientState = encryptionClient.ExportState();
+
+            if (await encryptionStateHandler.SetState(Id, FriendId, clientState))
+            {
+                logger.LogInformation("Saved State for encryption client");
+            }
+            else
+            {
+                logger.LogError("Failed to set encryption client state for {Id}", Id);
+            }
+        }
+        else
+        {
+            logger.LogError("Failed to {MethodName} for {Id} no keys retrieved from bundle handler", nameof(CreateAndSendBundle), Id);
+        }
+    }
+
     private async Task Submit()
     {
         SearchTermValidationFailures?.Clear();
@@ -102,8 +147,6 @@
             // update the button to show that we are working on changing the name
             UpdateButton("Searching", ButtonState.normal, true);
 
-            logger.LogInformation("Finding friend {FriendId}", displayName.DisplayName);
-
             string foundId = await displayNameHander.GetIdFromDisplayName(displayName.DisplayName);
 
             logger.LogInformation("Found Id {Id} for {FriendId}", foundId, displayName.DisplayName);
@@ -115,6 +158,9 @@
                 UpdateButton("Not Found", ButtonState.failed, false);
                 return;
             }
+
+            // create and store our encryption budle so we can create a shared secret with that person
+            await CreateAndSendBundle(foundId);
 
             await friendHandler.SendRequest(Id, foundId);
 

@@ -35,10 +35,24 @@
             return;
         }
 
+        Messages.Clear();
+
+        List<string> Ids = new();
+
         foreach (var item in waitingMessages)
         {
-            Messages.Add(await friendHandler.GetFriend(item.SenderId));
+            if (Ids.Contains(item.SenderId) is false)
+            {
+                Ids.Add(item.SenderId);
+            }
         }
+
+        foreach (var item in Ids)
+        {
+            Messages.Add(await friendHandler.GetFriend(item));
+        }
+
+        await InvokeAsync(() => StateHasChanged());
     }
 
     protected override async Task OnInitializedAsync()

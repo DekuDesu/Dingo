@@ -10,8 +10,12 @@
 		<PackageReference Include="Microsoft.AspNetCore.Identity" Version="2.2.0" />
 		<PackageReference Include="Microsoft.AspNetCore.Identity.UI" Version="5.0.3" />
 		<PackageReference Include="Microsoft.Extensions.Identity.Core" Version="5.0.3" />
-		<PackageReference Include="Newtonsoft.Json" Version="13.0.1-beta1" />
+		<PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
 		<PackageReference Include="System.Data.SqlClient" Version="4.8.2" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <ProjectReference Include="..\DingoAuthentication\DingoAuthentication.csproj" />
 	</ItemGroup>
 
 </Project>

@@ -5,6 +5,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
+using DingoAuthentication.Encryption;
+
 namespace DingoDataAccess.Account
 {
     public class AccountHandler : IAccountHandler
@@ -13,7 +15,8 @@ namespace DingoDataAccess.Account
         private readonly ISqlDataAccess messagesDb;
         private readonly ILogger<AccountHandler> logger;
         private readonly IDisplayNameHandler displayNameHandler;
-
+        private readonly IDiffieHellmanHandler diffieHellmanHandler;
+        private readonly IKeyAndBundleHandler<KeyBundleModel> bundleHandler;
         private const string ConnectionStringName = "DingoUsersConnection";
         private const string MessagesConnectionStringName = "DingoMessagesConnection";
 
@@ -23,12 +26,18 @@ namespace DingoDataAccess.Account
         private const string MessagesCreateNewUserProcedure = "CreateUser";
         private const string MessagesDeleteUserProcedure = "DeleteUser";
 
-        public AccountHandler(ISqlDataAccess _db, ISqlDataAccess _messagesDb, ILogger<AccountHandler> _logger, IDisplayNameHandler _displayNameHandler)
+        public AccountHandler(ISqlDataAccess _db, ISqlDataAccess _messagesDb, ILogger<AccountHandler> _logger, IDisplayNameHandler _displayNameHandler, IDiffieHellmanHandler diffieHellmanHandler, IKeyAndBundleHandler<KeyBundleModel> bundleHandler)
         {
             db = _db;
             messagesDb = _messagesDb;
             logger = _logger;
             displayNameHandler = _displayNameHandler;
+
+            // this is used to create the identity keys for this account
+            this.diffieHellmanHandler = diffieHellmanHandler;
+            // this is used to save the keys created
+            this.bundleHandler = bundleHandler;
+
             db.ConnectionStringName = ConnectionStringName;
             messagesDb.ConnectionStringName = MessagesConnectionStringName;
         }
@@ -67,6 +76,11 @@ namespace DingoDataAccess.Account
             await db.ExecuteVoidProcedure(CreateNewUserProcedure, new { Id });
 
             await messagesDb.ExecuteVoidProcedure(MessagesCreateNewUserProcedure, new { Id });
+
+            // create identity keys
+            var (PublicKey, PrivateKey) = diffieHellmanHandler.GenerateKeys();
+
+            await bundleHandler.SetKeys(Id, PublicKey, PrivateKey);
 
             logger.LogInformation("Finished creating new user {DisplayName}#{result} {Id}", DisplayName, result, Id);
 

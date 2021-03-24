@@ -3,10 +3,18 @@
 @inject ILogger<Message> logger
 @using System.ComponentModel.DataAnnotations;
 @using DingoDataAccess.Models.Friends
+@using DingoAuthentication.Encryption
+
 @inject IJSRuntime js
 
 @inject IMessageHandler messageHandler
 @inject IFriendHandler friendHandler
+
+@inject IEncryptionClient<EncryptedDataModel> encryptionClient
+@inject IEncryptedClientStateHandler clientStateHandler
+@inject IKeyAndBundleHandler<KeyBundleModel> bundleHandler
+
+@implements IDisposable
 
 <h1 class="flex">
     Message @(Friend?.DisplayName ?? "Loading...")<span style="color:grey;">#@(Friend?.UniqueIdentifier ?? 0000)</span>
@@ -65,6 +73,8 @@
 
 @code {
 
+    [CascadingParameter(Name = "MyFriendInfo")]
+    protected IFriendModel MyFriendInfo { get; set; }
 
     [CascadingParameter(Name = "Id")]
     protected string Id { get; set; }
@@ -84,6 +94,91 @@
     private FormModel InputValue = new();
 
     private bool BlockInput = false;
+
+    private int RefreshPollingRate = 5_000;
+
+    private System.Timers.Timer RefreshTimer = new();
+
+    // ENCRYPTION METHODS
+
+    private async Task LoadEncryptionClient()
+    {
+        // since we are chatting with this person we should already have a state stored to encrypt between us
+
+        // get the encryption state for the person we are chatting with
+        var state = await clientStateHandler.GetState(Id, FriendId);
+
+        if (state != null)
+        {
+            encryptionClient.ImportState(state);
+        }
+        else
+        {
+            logger.LogError("Failed to get encryption state for {Id} for {FriendId}", Id, FriendId);
+        }
+    }
+
+    private async Task SaveEncryptionState()
+    {
+        // export the local state to string
+        string state = encryptionClient.ExportState();
+
+        // ssave the string in the database
+        await clientStateHandler.SetState(Id, FriendId, state);
+    }
+
+    private async Task SendMessage(string message)
+    {
+        // encrypt the message
+        if (encryptionClient.TryEncrypt(message, out EncryptedDataModel encryptedData))
+        {
+            // serialize the message
+            string serializedEncryptedData = Newtonsoft.Json.JsonConvert.SerializeObject(encryptedData);
+
+            // send message over the wire
+
+            MessageModel rawMessage = new()
+            {
+                SenderId = Id,
+                Message = serializedEncryptedData,
+                TimeSent = DateTime.UtcNow
+            };
+
+            await messageHandler.SendMessage(Id, FriendId, rawMessage);
+        }
+        else
+        {
+            logger.LogError("Failed to encrypt message for {Id} to {FriendId}", Id, FriendId);
+        }
+    }
+
+    private void ReceiveMessage(IMessageModel rawMessage)
+    {
+        try
+        {
+            EncryptedDataModel deserializedEncryptedMessage = Newtonsoft.Json.JsonConvert.DeserializeObject<EncryptedDataModel>(rawMessage.Message);
+            if (encryptionClient.TryDecrypt(deserializedEncryptedMessage, out string decryptedString))
+            {
+                Messages.Add(
+                    new()
+                    {
+                        DisplayName = Friend.DisplayName,
+                        ShowSpinner = false,
+                        Message = decryptedString,
+                        ShowCheck = false,
+                        TimeSent = rawMessage.TimeSent,
+                        UniqueIdentifier = Friend.UniqueIdentifier
+                    }
+                );
+            }
+        }
+        catch (Exception e)
+        {
+            logger.LogError("Failed to receive message from {SenderId} Error: {Error}", rawMessage.SenderId, e);
+        }
+    }
+
+    // END ENCRYPTION METHODS
 
     private async Task ScrollToBottomOfChatbox()
     {
@@ -107,17 +202,27 @@
 
         await Dingo.Helpers.Sleep(100);
 
-        Messages.Add(new()
+        // create a object to keep track of the object and update the spinners as necessary
+        var msgReference = new MessageState()
         {
-            DisplayName = "friutypnch",
+            DisplayName = MyFriendInfo.DisplayName,
             ShowSpinner = true,
             Message = InputValue.Value,
             ShowCheck = false,
-            TimeSent = DateTime.Now,
-            UniqueIdentifier = 1234
-        });
+            TimeSent = DateTime.UtcNow,
+            UniqueIdentifier = MyFriendInfo.UniqueIdentifier
+        };
 
+        Messages.Add(msgReference);
+
+        // show animation immediately even though we haven't sent the message yet
         await ScrollToBottomOfChatbox();
+
+        await SendMessage(InputValue.Value);
+
+        // update the spinners
+        msgReference.ShowCheck = true;
+        msgReference.ShowSpinner = false;
 
         logger.LogInformation("Message {Message}", InputValue.Value);
 
@@ -129,68 +234,46 @@
     protected override async Task OnInitializedAsync()
     {
         await base.OnInitializedAsync();
-        logger.LogInformation("Initialized Component {ComponentName} Params: {Param1}:{Param1Value}", nameof(Message), nameof(Id), Id);
-        //Messages = new()
-        //{
-        //        new()
-        //        {
-        //            DisplayName = "friutypnch",
-        //            ShowSpinner = true,
-        //            Message = "Test message",
-        //            ShowCheck = false,
-        //            TimeSent = DateTime.Now,
-        //            UniqueIdentifier = 1234
-        //        },
-        //        new()
-        //        {
-        //            DisplayName = "DekuDesu",
-        //            ShowSpinner = false,
-        //            Message = "Another test Message",
-        //            ShowCheck = true,
-        //            TimeSent = DateTime.Now,
-        //            UniqueIdentifier = 2525
-        //        }
-        //    };
+
+        logger.LogInformation("Initialized Component {ComponentName} Params: {Param1}:{Param1Value} {Param2}:{Param2Value}", nameof(Message), nameof(Id), Id, nameof(MyFriendInfo), MyFriendInfo);
+
         await LoadMessages();
+
+        RefreshTimer.Interval = RefreshPollingRate;
+        RefreshTimer.Elapsed += async (x, y) => await LoadMessages();
+        RefreshTimer.AutoReset = true;
+        RefreshTimer.Start();
     }
 
     private async Task LoadMessages()
     {
-        List<IMessageModel> messages = await messageHandler.GetMessages(Id);
-
-        // only get messages from this friend
-        foreach (var item in messages.Where(x => x.SenderId == FriendId))
-        {
-            if (RawMessages.Contains(item) is false)
-            {
-                RawMessages.Add(item);
-            }
-        }
+        // this retrieves the messages for the person we are messaging, this also permenantly deletes those messages from the database, once the messages leave memory they are gone forever
+        RawMessages = await messageHandler.GetMessages(Id, FriendId);
 
         await RedrawMessages();
+
+        await ScrollToBottomOfChatbox();
     }
 
     private async Task RedrawMessages()
     {
+        // make sure we have the friend model for this friend
         Friend ??= await friendHandler.GetFriend(FriendId);
 
+        if (Friend is null)
+        {
+            return;
+        }
+
+        // draw the messages
         foreach (var item in RawMessages)
         {
-            if (Friend is not null)
-            {
-                Messages.Add(
-                    new()
-                    {
-                        DisplayName = Friend.DisplayName,
-                        ShowSpinner = false,
-                        Message = item.Message,
-                        ShowCheck = false,
-                        TimeSent = item.TimeSent,
-                        UniqueIdentifier = Friend.UniqueIdentifier
-                    }
-                );
-            }
+            ReceiveMessage(item);
         }
+
+        RawMessages.Clear();
+
+        await InvokeAsync(() => StateHasChanged());
     }
 
     private class FormModel
@@ -206,5 +289,12 @@
         public bool ShowSpinner { get; set; } = false;
         public bool ShowCheck { get; set; } = false;
         public DateTime TimeSent { get; set; }
+    }
+
+    public void Dispose()
+    {
+        RefreshTimer?.Stop();
+        RefreshTimer?.Close();
+        RefreshTimer?.Dispose();
     }
 }

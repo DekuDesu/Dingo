@@ -28,6 +28,7 @@ using FluentValidation;
 using Dingo.Data.UserInfo;
 using Microsoft.AspNetCore.Components.Server.Circuits;
 using DingoDataAccess.OAuth;
+using DingoAuthentication.Encryption;
 
 namespace Dingo
 {
@@ -143,8 +144,21 @@ namespace Dingo
             // gets and sets the messages between users
             services.AddTransient<IMessageHandler, MessageHandler>();
 
+            services.AddTransient(typeof(ISymmetricHandler<EncryptedDataModel>), typeof(SymmetricHandler<EncryptedDataModel>));
+            services.AddTransient<IDiffieHellmanHandler, DiffieHellmanHandler>();
+            services.AddTransient<IKeyDerivationFunction, KeyDerivationFunction>();
+            services.AddTransient(typeof(IKeyDerivationRatchet<EncryptedDataModel>), typeof(KeyDerivationRatchet<EncryptedDataModel>));
+            services.AddTransient<IKeyBundleModel, KeyBundleModel>();
+            services.AddTransient<ISignedKeyModel, SignedKeyModel>();
+            services.AddTransient<ISignatureHandler, SignatureHandler>();
+
+            services.AddTransient<IDiffieHellmanRatchet, DiffieHellmanRatchet>();
+
             // gets and sets the states for users
             services.AddTransient<IEncryptedClientStateHandler, EncryptedClientStateHandler>();
+
+            services.AddTransient(typeof(IKeyAndBundleHandler<KeyBundleModel>), typeof(KeyAndBundleHandler<KeyBundleModel>));
+            services.AddTransient(typeof(IEncryptionClient<EncryptedDataModel>), typeof(EncryptionClient<EncryptedDataModel, KeyBundleModel, SignedKeyModel>));
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
