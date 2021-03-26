@@ -179,6 +179,41 @@ namespace DingoAuthentication.Tests
             Assert.False(VerifyBytes(oldKey, ratchet.PrivateKey));
         }
 
+        [Fact]
+        public void OverridingIdentityKeysStillSignsCorrectly()
+        {
+            IDiffieHellmanRatchet identityratchet = CreateRatchet();
+            identityratchet.GenerateBaseKeys();
+
+            // we want to make sure we we generate new keys they are being signed immediatelyt and correctly
+            // we want to make sure the signature for the identity key matches
+            IDiffieHellmanRatchet ratchet = CreateRatchet();
+
+            // override the identity keys of the new ratchet
+            if (identityratchet is DiffieHellmanRatchet df)
+            {
+                ratchet.GenerateBaseKeys(df.X509IdentityKey, df.x509IdentityPrivateKey);
+            }
+
+            ISignatureHandler signer = new SignatureHandler(sLogger);
+
+            Assert.True(signer.Verify(ratchet.PublicKey, ratchet.IdentitySignature, identityratchet.X509IdentityKey));
+
+            byte[] oldKey = ratchet.PrivateKey;
+
+            // override the identity keys of the new ratchet
+            if (identityratchet is DiffieHellmanRatchet dh2)
+            {
+                ratchet.GenerateBaseKeys(dh2.X509IdentityKey, dh2.x509IdentityPrivateKey);
+            }
+
+            // make sure the new keys verify correctly
+            Assert.True(signer.Verify(ratchet.PublicKey, ratchet.IdentitySignature, identityratchet.X509IdentityKey));
+
+            // make sure the new key isn't the old key
+            Assert.False(VerifyBytes(oldKey, ratchet.PrivateKey));
+        }
+
 
         [Theory]
         [InlineData(1_000)]

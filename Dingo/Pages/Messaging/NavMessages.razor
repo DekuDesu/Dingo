@@ -3,18 +3,39 @@
 @inject ILogger<NavMessages> logger
 @inject IFriendHandler friendHandler
 
+@implements IDisposable
+
 @using DingoDataAccess.Models.Friends
 
-@foreach (var item in Messages)
+@if (Messages.Count == 0)
 {
-    <NavMessage Friend=@item />
+    <li class="nav-item px-3">
+        <div class="rounded-1 align-self-center py-2" style="text-align: center; background-color: darkslateblue;">
+            <span style="color: white; font-weight: bold;">
+                @NoMessagesText
+            </span>
+        </div>
+    </li>
+}
+else
+{
+    @foreach (var item in Messages)
+    {
+        <NavMessage Friend=@item />
+    }
 }
 
 @code {
     [CascadingParameter(Name = "Id")]
     protected string Id { get; set; }
 
+    private const string NoMessagesText = "ʕ•ᴥ•ʔ All Caught Up!";
+
     List<IFriendModel> Messages = new();
+
+    private int MessagePollingRate = 15_000;
+
+    System.Timers.Timer CheckForMessagesTimer = new();
 
     private async Task LoadMessages()
     {
@@ -29,16 +50,44 @@
             return;
         }
 
+        Messages.Clear();
+
+        List<string> Ids = new();
+
         foreach (var item in waitingMessages)
         {
-            Messages.Add(await friendHandler.GetFriend(item.SenderId));
+            if (Ids.Contains(item.SenderId) is false)
+            {
+                Ids.Add(item.SenderId);
+            }
         }
+
+        foreach (var item in Ids)
+        {
+            Messages.Add(await friendHandler.GetFriend(item));
+        }
+
+        await InvokeAsync(() => StateHasChanged());
     }
 
     protected override async Task OnInitializedAsync()
     {
         await base.OnInitializedAsync();
+
         logger.LogInformation("Initialized Component {ComponentName} Params: {Param1}:{Param1Value}", nameof(NavMessages), nameof(Id), Id);
+
         await LoadMessages();
+
+        CheckForMessagesTimer.Elapsed += async (x, y) => await LoadMessages();
+        CheckForMessagesTimer.Interval = MessagePollingRate;
+        CheckForMessagesTimer.AutoReset = true;
+        CheckForMessagesTimer.Start();
+    }
+
+    public void Dispose()
+    {
+        CheckForMessagesTimer?.Stop();
+        CheckForMessagesTimer?.Close();
+        CheckForMessagesTimer?.Dispose();
     }
 }

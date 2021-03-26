@@ -43,6 +43,11 @@ app {
     align-items: center;
 }
 
+.brand-text {
+    font-size: 2rem;
+    font-family: 'Lilita One', Arial, Helvetica, sans-serif;
+}
+
 .main {
     flex: 1;
 }

@@ -10,6 +10,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Serilog;
+using DingoAuthentication.Encryption;
 
 [assembly: HostingStartup(typeof(Dingo.Areas.Identity.IdentityHostingStartup))]
 namespace Dingo.Areas.Identity
@@ -25,7 +26,7 @@ namespace Dingo.Areas.Identity
                 services.AddTransient<ISqlDataAccess, SqlDataAccess>();
                 services.AddTransient<IFullDisplayNameModel, FullDisplayNameModel>();
                 services.AddSingleton(typeof(IDisplayNameHandler), typeof(DisplayNameHandler<FullDisplayNameModel>));
-                services.AddSingleton<IAccountHandler, AccountHandler>();
+                services.AddSingleton(typeof(IAccountHandler), typeof(AccountHandler<KeyBundleModel<SignedKeyModel>, SignedKeyModel>));
                 services.AddTransient<IStatusHandler, StatusHandler>();
             });
         }

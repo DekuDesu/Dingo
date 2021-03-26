@@ -10,7 +10,7 @@ namespace DingoDataAccess
 {
     public class QueryCache<T, U> : IQueryCache<T, U>
     {
-        private List<(System.Timers.Timer, (string, U))> ExpirationTimers = new();
+        private HashSet<(System.Timers.Timer, (string, U))> ExpirationTimers = new();
 
         public int DefaultExpirationTime = 30000;
 

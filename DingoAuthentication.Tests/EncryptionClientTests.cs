@@ -14,7 +14,7 @@ namespace DingoAuthentication.Tests
         public static TmpLogger<DiffieHellmanHandler> dhLogger = new();
         public static TmpLogger<SignatureHandler> sLogger = new();
         public static TmpLogger<SymmetricHandler<EncryptedDataModel>> smLogger = new();
-        public static TmpLogger<EncryptionClient<EncryptedDataModel, KeyBundleModel, SignedKeyModel>> cllogger = new();
+        public static TmpLogger<EncryptionClient<EncryptedDataModel, KeyBundleModel<SignedKeyModel>, SignedKeyModel>> cllogger = new();
         public static TmpLogger<KeyDerivationRatchet<EncryptedDataModel>> kdfLogger = new();
 
         private static Random Generator = new();
@@ -164,9 +164,9 @@ namespace DingoAuthentication.Tests
             return true;
         }
 
-        EncryptionClient<EncryptedDataModel, KeyBundleModel, SignedKeyModel> CreateClient()
+        EncryptionClient<EncryptedDataModel, KeyBundleModel<SignedKeyModel>, SignedKeyModel> CreateClient()
         {
-            return new EncryptionClient<EncryptedDataModel, KeyBundleModel, SignedKeyModel>(cllogger, CreateRatchet(), CreateKDFRatchet(), CreateKDFRatchet());
+            return new EncryptionClient<EncryptedDataModel, KeyBundleModel<SignedKeyModel>, SignedKeyModel>(cllogger, CreateRatchet(), CreateKDFRatchet(), CreateKDFRatchet());
         }
 
         private IDiffieHellmanRatchet CreateRatchet()

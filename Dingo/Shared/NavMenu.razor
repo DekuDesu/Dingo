@@ -35,29 +35,23 @@
                 </li>
             </NotAuthorized>
             <Authorized>
-                <li class="nav-item px-3 my-2" style="text-align: center;">
-                    <div class="row">
-                        <img class="col-4 rounded-circle w-50 h-50 mx-auto d-block" src="/Images/DefaultAvatar.png" />
+                <li class="nav-item px-3 my-2 align-self-center" style="text-align: center; max-width: 500px;">
+                    <div class="">
+                        <img class="col-4 rounded-circle w-50 h-50 mx-auto d-block" src=@(MyFriendInfo?.AvatarPath ?? "/Images/DefaultAvatar.png") />
                     </div>
-                    <div class="row">
-                        <div class="text-wrap" style="max-width: 250px; color: white; font-weight:bold; font-size: large;">
-                            @(DisplayName ?? "Loading")
-                            <span style="color: grey; font-size: 1em;">
-                                #@(MyFriendInfo?.UniqueIdentifier.ToString() ?? "Loading")
-                            </span>
-                        </div>
+                    <div class="">
+                        <span class="text-wrap" style="max-width: 250px; color: white; font-weight:bold; font-size: large;">@(DisplayName ?? "Loading")</span>
+                        <span style="color: grey; font-size: 1em; font-weight: bold;">
+                            #@(MyFriendInfo?.UniqueIdentifier.ToString() ?? "Loading")
+                        </span>
                     </div>
-                    <div class="row my-2" style="color: white;">
-                        <div class="col">
-                            <a href="/Identity/Account/Logout" title="Logout" style="text-decoration: none;">
-                                <span class="oi oi-account-logout mx-auto" aria-hidden="true"></span>
-                            </a>
-                        </div>
-                        <div class="col">
-                            <a href="/Identity/Account/Manage" title="Manage Account" style="text-decoration: none;">
-                                <span class="oi oi-cog mx-auto" aria-hidden="true"></span>
-                            </a>
-                        </div>
+                    <div class="input-group flex-grow-1 my-2">
+                        <a class="flex-grow-1" href="/Identity/Account/Logout" title="Logout" style="text-decoration: none;">
+                            <span class="oi oi-account-logout mx-auto" aria-hidden="true"></span>
+                        </a>
+                        <a class="flex-grow-1" href="/Identity/Account/Manage" title="Manage Account" style="text-decoration: none;">
+                            <span class="oi oi-cog mx-auto" aria-hidden="true"></span>
+                        </a>
                     </div>
                     <div class="row">
                         <Dingo.Pages.Account.StatusDropDown />

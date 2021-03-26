@@ -28,6 +28,7 @@ using FluentValidation;
 using Dingo.Data.UserInfo;
 using Microsoft.AspNetCore.Components.Server.Circuits;
 using DingoDataAccess.OAuth;
+using DingoAuthentication.Encryption;
 
 namespace Dingo
 {
@@ -113,15 +114,18 @@ namespace Dingo
 
             services.AddSingleton<WeatherForecastService>();
 
+            // access to databases
             services.AddTransient<ISqlDataAccess, SqlDataAccess>();
 
             services.AddSingleton<IFullDisplayNameModel, FullDisplayNameModel>();
 
+            // defines a friend that holds information about users in general
             services.AddTransient<IFriendModel, FriendModel>();
 
             // object caches queries in memory and needs to be a singleton
             services.AddSingleton(typeof(IDisplayNameHandler), typeof(DisplayNameHandler<FullDisplayNameModel>));
 
+            // gets and sets friend lists
             services.AddTransient(typeof(IFriendListHandler), typeof(FriendListHandler<FriendModel>));
 
             // object caches queries in memory and needs to be a singleton
@@ -130,13 +134,41 @@ namespace Dingo
             // handles db queries to get and set the online status of accounts
             services.AddTransient<IStatusHandler, StatusHandler>();
 
+            // validates user data
             services.AddTransient(typeof(IValidator<DisplayNameModel>), typeof(DisplayNameValidator));
+
             services.AddTransient(typeof(IValidator<SingleSearchTermModel>), typeof(SingleSearchTermValidator));
 
+            // gets and sets the Oath api key for users
             services.AddTransient<IOAuthHandler, OAuthHandler>();
 
+            // gets and sets the messages between users
             services.AddTransient<IMessageHandler, MessageHandler>();
 
+            services.AddTransient(typeof(ISymmetricHandler<EncryptedDataModel>), typeof(SymmetricHandler<EncryptedDataModel>));
+
+            services.AddTransient<IDiffieHellmanHandler, DiffieHellmanHandler>();
+
+            services.AddTransient<IKeyDerivationFunction, KeyDerivationFunction>();
+
+            services.AddTransient(typeof(IKeyDerivationRatchet<EncryptedDataModel>), typeof(KeyDerivationRatchet<EncryptedDataModel>));
+
+            services.AddTransient(typeof(IKeyBundleModel<SignedKeyModel>), typeof(KeyBundleModel<SignedKeyModel>));
+
+            services.AddTransient<ISignedKeyModel, SignedKeyModel>();
+
+            services.AddTransient<ISignatureHandler, SignatureHandler>();
+
+            services.AddTransient<IDiffieHellmanRatchet, DiffieHellmanRatchet>();
+
+            // gets and sets the states for users
+            services.AddTransient<IEncryptedClientStateHandler, EncryptedClientStateHandler>();
+
+            services.AddTransient(typeof(IKeyAndBundleHandler<KeyBundleModel<SignedKeyModel>, SignedKeyModel>), typeof(KeyAndBundleHandler<KeyBundleModel<SignedKeyModel>, SignedKeyModel>));
+
+            services.AddTransient(typeof(IEncryptionClient<EncryptedDataModel, SignedKeyModel>), typeof(EncryptionClient<EncryptedDataModel, KeyBundleModel<SignedKeyModel>, SignedKeyModel>));
+
+            services.AddTransient(typeof(IBundleProcessor), typeof(BundleProcessor<KeyBundleModel<SignedKeyModel>, EncryptedDataModel, SignedKeyModel>));
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

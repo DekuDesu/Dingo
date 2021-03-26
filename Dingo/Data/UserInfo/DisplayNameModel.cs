@@ -8,5 +8,6 @@ namespace Dingo.Data.UserInfo
     public class DisplayNameModel
     {
         public string DisplayName { get; set; }
+        public string MyFullDisplayName { get; set; }
     }
 }

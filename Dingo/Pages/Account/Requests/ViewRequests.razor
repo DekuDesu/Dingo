@@ -4,11 +4,26 @@
 @inject IFriendListHandler friendlistHandler
 @inject IFriendHandler friendHandler
 
+@implements IDisposable
+
 <table class="table table-striped border rounded table-hover">
     <tbody>
-        @foreach (var item in Requests)
+        @if (Requests.Count == 0)
         {
-            <Dingo.Pages.Account.Requests.RequestEntry Id=@Id friend=@item Requests=@Requests StateHasChangedCallback=@StateHasChangedCallback />
+            <tr scope="row">
+                <td class="d-flex justify-content-between">
+                    <div class="flex-grow-1 mx-1" style="text-align: center;">
+                        <span>@(NoRequestMessage[rng.Next(0, NoRequestMessage.Count)])</span>
+                    </div>
+                </td>
+            </tr>
+        }
+        else
+        {
+            @foreach (var item in Requests)
+            {
+                <Dingo.Pages.Account.Requests.RequestEntry Id=@Id friend=@item Requests=@Requests StateHasChangedCallback=@StateHasChangedCallback />
+            }
         }
     </tbody>
 </table>
@@ -19,6 +34,22 @@
 
     private List<IFriendModel> Requests { get; set; } = new();
 
+    private int RefreshPollingRate = 15_000;
+
+    private System.Timers.Timer RefreshTimer = new();
+
+    private Random rng = new();
+
+    private List<string> NoRequestMessage = new()
+    {
+            "No Pending Requests yet, try sending them one! ༼  ୧ ಠ ᴥ ಠ ༽ノ",
+            "Friends coming soon! (๑•́ ヮ •̀๑)",
+            "No Requests yet, but hopefully some soon! ٩(^‿^)۶",
+            "(✿◠‿◠) None yet, send them one instead!",
+            "ᕙ(`▽´)ᕗ None yet! Patience is strength!",
+            "※\\(^o^)/※ Send a request above! ※\\(^o^)/※",
+        };
+
     protected override async Task OnInitializedAsync()
     {
         await GetRequests();
@@ -26,6 +57,11 @@
         await base.OnInitializedAsync();
 
         logger.LogInformation("Initialized Component {ComponentName} Params: {Param1}:{Param1Value}", nameof(ViewRequests), nameof(Id), Id);
+
+        RefreshTimer.Elapsed += async (x, y) => await GetRequests();
+        RefreshTimer.Interval = RefreshPollingRate;
+        RefreshTimer.AutoReset = true;
+        RefreshTimer.Start();
     }
 
     private async Task GetRequests()
@@ -34,11 +70,18 @@
 
         Requests = await friendHandler.GetRequests(Id);
 
-        logger.LogInformation("Found request list for {Id} {Count}", Id, Requests.Count);
+        await InvokeAsync(() => StateHasChanged());
     }
 
     private void StateHasChangedCallback()
     {
         StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        RefreshTimer?.Stop();
+        RefreshTimer?.Close();
+        RefreshTimer?.Dispose();
     }
 }
