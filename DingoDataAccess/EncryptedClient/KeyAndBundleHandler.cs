@@ -9,9 +9,9 @@ using Newtonsoft.Json;
 
 namespace DingoDataAccess
 {
-    public class KeyAndBundleHandler<TKeyBundleType> : IKeyAndBundleHandler<TKeyBundleType> where TKeyBundleType : IKeyBundleModel, new()
+    public class KeyAndBundleHandler<TKeyBundleType, TSignedKeyType> : IKeyAndBundleHandler<TKeyBundleType, TSignedKeyType> where TSignedKeyType : ISignedKeyModel, new() where TKeyBundleType : IKeyBundleModel<TSignedKeyType>, new()
     {
-        private readonly ILogger<KeyAndBundleHandler<TKeyBundleType>> logger;
+        private readonly ILogger<KeyAndBundleHandler<TKeyBundleType, TSignedKeyType>> logger;
         private readonly ISqlDataAccess db;
 
         private const string ConnectionStringName = "DingoMessagesConnection";
@@ -22,7 +22,7 @@ namespace DingoDataAccess
         private const string GetBundlesProcedureName = "GetBundles";
         private const string SetBundlesProcedureName = "SetBundles";
 
-        public KeyAndBundleHandler(ILogger<KeyAndBundleHandler<TKeyBundleType>> logger, ISqlDataAccess db)
+        public KeyAndBundleHandler(ILogger<KeyAndBundleHandler<TKeyBundleType, TSignedKeyType>> logger, ISqlDataAccess db)
         {
             this.logger = logger;
             this.db = db;
@@ -64,7 +64,7 @@ namespace DingoDataAccess
         /// <param name="Id"></param>
         /// <param name="FriendId"></param>
         /// <returns></returns>
-        public async Task<IKeyBundleModel> GetBundle(string Id, string FriendId)
+        public async Task<TKeyBundleType> GetBundle(string Id, string FriendId)
         {
             try
             {
@@ -123,15 +123,16 @@ namespace DingoDataAccess
         {
             try
             {
-                List<string> keys = await db.ExecuteProcedure<string, dynamic>(GetIdentityKeysProcedureName, new { Id });
+                (string serializedX509IdentityKey, string serializedIdentityPrivateKey) = await db.ExecuteSingleProcedure<(string, string), dynamic>(GetIdentityKeysProcedureName, new { Id });
 
-                if (keys?.Count is null or < 2 or > 2)
-                {
-                    return default;
-                }
+                //if (keys?.Count is null or < 2 or > 2)
+                //{
+                //    logger.LogError("Keys retreived from query do match expected count (2) actual ({Count}) Keys: {Keys} Keys[0]{Keys0}", keys?.Count, keys, keys?[0]);
+                //    return default;
+                //}
 
-                byte[] X509IdentityKey = JsonConvert.DeserializeObject<byte[]>(keys[0]);
-                byte[] IdentityPrivateKey = JsonConvert.DeserializeObject<byte[]>(keys[1]);
+                byte[] X509IdentityKey = JsonConvert.DeserializeObject<byte[]>(serializedX509IdentityKey);
+                byte[] IdentityPrivateKey = JsonConvert.DeserializeObject<byte[]>(serializedIdentityPrivateKey);
 
                 return (X509IdentityKey, IdentityPrivateKey);
             }
@@ -177,7 +178,7 @@ namespace DingoDataAccess
             }
         }
 
-        private async Task<Dictionary<string, TKeyBundleType>> GetBundles(string Id)
+        public async Task<Dictionary<string, TKeyBundleType>> GetBundles(string Id)
         {
             try
             {

@@ -8,9 +8,22 @@
 
 <table class="table table-striped border rounded table-hover">
     <tbody>
-        @foreach (var item in Friends)
+        @if (Friends.Count == 0)
         {
-            <FriendEntry Id=@Id Friend=@item Friends=@Friends StateChangedCallback=@StateChangedCallback />
+            <tr scope="row">
+                <td class="d-flex justify-content-between">
+                    <div class="flex-grow-1 mx-1" style="text-align: center;">
+                        <span>@(NoFriendMessage[rng.Next(0, NoFriendMessage.Count)])</span>
+                    </div>
+                </td>
+            </tr>
+        }
+        else
+        {
+            @foreach (var item in Friends)
+            {
+                <FriendEntry Id=@Id Friend=@item Friends=@Friends StateChangedCallback=@StateChangedCallback />
+            }
         }
     </tbody>
 </table>
@@ -19,47 +32,59 @@
     [Parameter]
     public string Id { get; set; }
 
-private List<IFriendModel> Friends { get; set; } = new();
+    private List<IFriendModel> Friends { get; set; } = new();
 
-private int RefreshPollingRate = 15_000;
+    private int RefreshPollingRate = 15_000;
 
-private System.Timers.Timer RefreshTimer = new();
+    private Random rng = new();
 
-protected override async Task OnParametersSetAsync()
-{
+    private List<string> NoFriendMessage = new()
+    {
+            "No Friends yet, add them above! ༼  ୧ ಠ ᴥ ಠ ༽ノ",
+            "Welcome! Add some friends using the button above! (๑•́ ヮ •̀๑)",
+            "Woohoo! Time to add some friends! ٩(^‿^)۶",
+            "(✿◠‿◠) Add some friends above!",
+            "ᕙ(`▽´)ᕗ Time to add my friends, yeah!",
+            "※\\(^o^)/※ Friend Time! 	※\\(^o^)/※",
+        };
 
-    await base.OnParametersSetAsync();
-}
+    private System.Timers.Timer RefreshTimer = new();
 
-protected override async Task OnInitializedAsync()
-{
-    await GetFriends();
+    protected override async Task OnParametersSetAsync()
+    {
 
-    await base.OnInitializedAsync();
+        await base.OnParametersSetAsync();
+    }
 
-    logger.LogInformation("Initialized Component {ComponentName} Params: {Param1}:{Param1Value}", nameof(DisplayFriends), nameof(Id), Id);
+    protected override async Task OnInitializedAsync()
+    {
+        await GetFriends();
 
-    RefreshTimer.Interval = RefreshPollingRate;
-    RefreshTimer.AutoReset = true;
-    RefreshTimer.Elapsed += async (x, y) => await GetFriends();
-    RefreshTimer.Start();
-}
+        await base.OnInitializedAsync();
 
-private async Task GetFriends()
-{
-    Friends = await friendHandler.GetFriendList(Id);
-    await InvokeAsync(() => StateHasChanged());
-}
+        logger.LogInformation("Initialized Component {ComponentName} Params: {Param1}:{Param1Value}", nameof(DisplayFriends), nameof(Id), Id);
 
-private void StateChangedCallback()
-{
-    StateHasChanged();
-}
+        RefreshTimer.Interval = RefreshPollingRate;
+        RefreshTimer.AutoReset = true;
+        RefreshTimer.Elapsed += async (x, y) => await GetFriends();
+        RefreshTimer.Start();
+    }
 
-public void Dispose()
-{
-    RefreshTimer?.Stop();
-    RefreshTimer?.Close();
-    RefreshTimer?.Dispose();
-}
+    private async Task GetFriends()
+    {
+        Friends = await friendHandler.GetFriendList(Id);
+        await InvokeAsync(() => StateHasChanged());
+    }
+
+    private void StateChangedCallback()
+    {
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        RefreshTimer?.Stop();
+        RefreshTimer?.Close();
+        RefreshTimer?.Dispose();
+    }
 }

@@ -90,6 +90,36 @@ namespace DingoDataAccess
             }
         }
 
+        public async Task<bool> DeleteState(string Id, string FriendId)
+        {
+            if (Helpers.FullVerifyGuid(ref Id, logger) is false)
+            {
+                return false;
+            }
+
+            if (Helpers.FullVerifyGuid(ref FriendId, logger) is false)
+            {
+                return false;
+            }
+
+            try
+            {
+                var states = await GetAllStates(Id);
+
+                if (states.ContainsKey(FriendId))
+                {
+                    states.Remove(FriendId);
+                }
+
+                return await SetAllStates(Id, states);
+            }
+            catch (Exception e)
+            {
+                logger.LogError("Failed to delete state for {FriendId} from {Id}'s states Error: {Error}", FriendId, Id, e);
+                return false;
+            }
+        }
+
         private async Task<Dictionary<string, string>> GetAllStates(string Id)
         {
             try

@@ -136,6 +136,7 @@ namespace Dingo
 
             // validates user data
             services.AddTransient(typeof(IValidator<DisplayNameModel>), typeof(DisplayNameValidator));
+
             services.AddTransient(typeof(IValidator<SingleSearchTermModel>), typeof(SingleSearchTermValidator));
 
             // gets and sets the Oath api key for users
@@ -145,11 +146,17 @@ namespace Dingo
             services.AddTransient<IMessageHandler, MessageHandler>();
 
             services.AddTransient(typeof(ISymmetricHandler<EncryptedDataModel>), typeof(SymmetricHandler<EncryptedDataModel>));
+
             services.AddTransient<IDiffieHellmanHandler, DiffieHellmanHandler>();
+
             services.AddTransient<IKeyDerivationFunction, KeyDerivationFunction>();
+
             services.AddTransient(typeof(IKeyDerivationRatchet<EncryptedDataModel>), typeof(KeyDerivationRatchet<EncryptedDataModel>));
-            services.AddTransient<IKeyBundleModel, KeyBundleModel>();
+
+            services.AddTransient(typeof(IKeyBundleModel<SignedKeyModel>), typeof(KeyBundleModel<SignedKeyModel>));
+
             services.AddTransient<ISignedKeyModel, SignedKeyModel>();
+
             services.AddTransient<ISignatureHandler, SignatureHandler>();
 
             services.AddTransient<IDiffieHellmanRatchet, DiffieHellmanRatchet>();
@@ -157,8 +164,11 @@ namespace Dingo
             // gets and sets the states for users
             services.AddTransient<IEncryptedClientStateHandler, EncryptedClientStateHandler>();
 
-            services.AddTransient(typeof(IKeyAndBundleHandler<KeyBundleModel>), typeof(KeyAndBundleHandler<KeyBundleModel>));
-            services.AddTransient(typeof(IEncryptionClient<EncryptedDataModel>), typeof(EncryptionClient<EncryptedDataModel, KeyBundleModel, SignedKeyModel>));
+            services.AddTransient(typeof(IKeyAndBundleHandler<KeyBundleModel<SignedKeyModel>, SignedKeyModel>), typeof(KeyAndBundleHandler<KeyBundleModel<SignedKeyModel>, SignedKeyModel>));
+
+            services.AddTransient(typeof(IEncryptionClient<EncryptedDataModel, SignedKeyModel>), typeof(EncryptionClient<EncryptedDataModel, KeyBundleModel<SignedKeyModel>, SignedKeyModel>));
+
+            services.AddTransient(typeof(IBundleProcessor), typeof(BundleProcessor<KeyBundleModel<SignedKeyModel>, EncryptedDataModel, SignedKeyModel>));
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

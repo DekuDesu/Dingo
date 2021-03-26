@@ -12,6 +12,7 @@ namespace Dingo.Data.Validators
         public DisplayNameValidator()
         {
             RuleFor(x => x.DisplayName).NotEmpty().WithMessage("Field required").Length(6, 100).WithMessage("Must be between 6 and 100 characters").Must(x => x?.Contains('#') ?? false).WithMessage("Include tag number, ex. Username#1234");
+            RuleFor(x => x).NotNull().Must(x => x?.DisplayName.Replace(" ", "").Trim() != x?.MyFullDisplayName.Replace(" ", "").Trim()).WithMessage("ಠ_ಠ");
         }
     }
 }

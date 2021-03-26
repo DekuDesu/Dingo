@@ -3,72 +3,80 @@
 
 @using DingoAuthentication.Encryption
 
-@inject IEncryptedClientStateHandler encryptionStateHandler
-@inject IEncryptionClient<EncryptedDataModel> encryptionClient
-@inject IKeyAndBundleHandler<KeyBundleModel> bundleHandler
+@inject IKeyAndBundleHandler<KeyBundleModel<SignedKeyModel>, SignedKeyModel> bundleHandler
+@inject IBundleProcessor bundleProcessor
 
 @using DingoDataAccess.Models.Friends
 
 <tr scope="row">
-    <td class="col-lg-1 col-md-2 col-sm-3 col-2 align-middle">
-        <img src=@friend.AvatarPath class="img-fluid rounded-circle" />
-    </td>
-    <td class="col-lg-6 col-md-5 col-sm-4 col-5 align-middle">
-        <div class="row h4">
-            @friend.DisplayName#@friend.UniqueIdentifier.ToString()
+    <td class="d-flex">
+        <div class="mx-1 align-self-center" style="min-width: 64px;">
+            <img src=@(friend.AvatarPath ?? "/Images/DefaultAvatar.png") class="img-fluid rounded-circle " style="width: 64px; height: 64px;" />
         </div>
-        <div class="row">
-            @friend.Status.ToString()
+        <div class="align-self-center flex-grow-1 mx-2">
+            <span style="font-weight: bold;">
+                @friend.DisplayName
+            </span>
+            <span style="font-weight: bold; color: grey;">
+                #@friend.UniqueIdentifier.ToString()
+            </span>
         </div>
-    </td>
-    <td class="col-lg-5 col-md-5 col-sm-5 col-5 align-middle">
-        <div class="row align-middle">
-            <div class="col-sm-4" style="text-align: center;">
-                @if (ShowSpinner == 0)
-                {
-                    <div class="spinner-border text-success my-2" role="status">
-                        <span class="visually-hidden">Adding...</span>
-                    </div>
-                }
-                else
-                {
-                    <button class="btn btn-link rounded-circle row oi oi-circle-check text-decoration-none" title="circle check" aria-hidden="true" style=@AcceptStyle @onclick=@AcceptRequest />
-                }
-            </div>
-            <div class="col-sm-4" style="text-align: center;">
-                @if (ShowSpinner == 1)
-                {
-                    <div class="spinner-border text-secondary my-2" role="status">
-                        <span class="visually-hidden">Ignoring...</span>
-                    </div>
-                }
-                else
-                {
-                    <button class="btn btn-link rounded-circle row oi oi-circle-x text-decoration-none" title="circle check" aria-hidden="true" style=@IgnoreStyle @onclick=@IgnoreRequest />
-                }
-            </div>
-            <div class="col-sm-4" style="text-align: center;">
-                @if (ShowSpinner == 2)
-                {
-                    <div class="spinner-border text-danger my-2" role="status">
-                        <span class="visually-hidden">Blocking...</span>
-                    </div>
-                }
-                else
-                {
-                    <button class="btn btn-link rounded-circle row oi oi-ban text-decoration-none" title="circle check" aria-hidden="true" style=@BlockStyle @onclick=@BlockRequest />
-                }
+        <div class="mx-1 d-block d-sm-block d-md-none align-self-center">
+            <!-- SMOL SCREENS -->
+            <div class="input-group align-self-center">
+                <button class=@AcceptSmallClass title="Accept Friend Request" aria-hidden="true" style=@AcceptSmallStyle @onclick=@AcceptRequest @onmouseover=@(()=>ToggleHovering_Accept()) @onmouseout=@(()=>ToggleHovering_Accept())>
+                    @if (ShowSpinner == 0)
+                    {
+                        <div class="spinner-border my-1 text-success" role="status" style="color: white;">
+                            <span class="visually-hidden">Adding...</span>
+                        </div>
+                    }
+                </button>
+                <button class=@IgnoreSmallClass title="Ignore Request" aria-hidden="true" style=@IgnoreSmallStyle @onclick=@IgnoreRequest @onmouseover=@(()=>ToggleHovering_Ignore()) @onmouseout=@(()=>ToggleHovering_Ignore())>
+                    @if (ShowSpinner == 1)
+                    {
+                        <div class="spinner-border my-1 text-secondary" role="status" style="color: white;">
+                            <span class="visually-hidden">Ignoring...</span>
+                        </div>
+                    }
+                </button>
+                <button class=@BlockSmallClass title="Block User" aria-hidden="true" style=@BlockSmallStyle @onclick=@BlockRequest @onmouseover=@(()=>ToggleHovering_Block()) @onmouseout=@(()=>ToggleHovering_Block())>
+                    @if (ShowSpinner == 2)
+                    {
+                        <div class="spinner-border my-1 text-danger" role="status" style="color: white;">
+                            <span class="visually-hidden">Blocking...</span>
+                        </div>
+                    }
+                </button>
             </div>
         </div>
-        <div class="row align-middle">
-            <div class="col-sm-4" style="text-align: center;">
-                Accept
-            </div>
-            <div class="col-sm-4" style="text-align: center;">
-                Ignore
-            </div>
-            <div class="col-sm-4" style="text-align: center;">
-                Block
+        <div class="mx-3 d-none d-sm-none d-md-block align-self-center">
+            <!-- LARGER SCREENS -->
+            <div class="input-group align-self-center">
+                <button class=@AcceptClass title="Accept Friend Request" aria-hidden="true" style=@AcceptStyle @onclick=@AcceptRequest @onmouseover=@(()=>ToggleHovering_Accept()) @onmouseout=@(()=>ToggleHovering_Accept())>
+                    @if (ShowSpinner == 0)
+                    {
+                        <div class=@AcceptSpinnerClass role="status" style="color: white;">
+                            <span class="visually-hidden">Adding...</span>
+                        </div>
+                    }
+                </button>
+                <button class=@IgnoreClass title="Ignore Request" aria-hidden="true" style=@IgnoreStyle @onclick=@IgnoreRequest @onmouseover=@(()=>ToggleHovering_Ignore()) @onmouseout=@(()=>ToggleHovering_Ignore())>
+                    @if (ShowSpinner == 1)
+                    {
+                        <div class=@IgnoreSpinnerClass role="status" style="color: white;">
+                            <span class="visually-hidden">Ignoring...</span>
+                        </div>
+                    }
+                </button>
+                <button class=@BlockClass title="Block User" aria-hidden="true" style=@BlockStyle @onclick=@BlockRequest @onmouseover=@(()=>ToggleHovering_Block()) @onmouseout=@(()=>ToggleHovering_Block())>
+                    @if (ShowSpinner == 2)
+                    {
+                        <div class=@BlockSpinnerClass role="status" style="color: white;">
+                            <span class="visually-hidden">Blocking...</span>
+                        </div>
+                    }
+                </button>
             </div>
         </div>
     </td>
@@ -89,15 +97,59 @@
 
     private string IconSize = "font-size: xx-large;";
 
-    private string AcceptStyle => IconSize + "color: green;";
+    private string AcceptStyle => IconSize + AcceptColor;
 
-    private string IgnoreStyle => IconSize + "color: black;";
+    private string AcceptSmallStyle => IconSize + "color: green;";
 
-    private string BlockStyle => IconSize + "color: red;";
+    private string AcceptColor => hoveringAccept ? "color: white;" : "color: green;";
+
+    private string AcceptClass => $"btn btn-outline-success {(ShowSpinner is 0 ? "" : "oi oi-circle-check")}";
+
+    private string AcceptSmallClass => $"btn btn-link text-decoration-none {(ShowSpinner is 0 ? "" : "oi oi-circle-check")}";
+
+    private string AcceptSpinnerClass => $"spinner-border my-1 {AcceptSpinnerColor}";
+
+    private string AcceptSpinnerColor => hoveringAccept ? "text-light" : "text-success";
+
+    private string IgnoreStyle => IconSize + IgnoreColor;
+
+    private string IgnoreSmallStyle => IconSize + "color: grey;";
+
+    private string IgnoreColor => hoveringIgnore ? "color: white;" : "color: black;";
+
+    private string IgnoreClass => $"btn btn-outline-secondary {(ShowSpinner is 1 ? "" : "oi oi-circle-x")}";
+
+    private string IgnoreSmallClass => $"btn btn-link text-decoration-none {(ShowSpinner is 1 ? "" : "oi oi-circle-x")}";
+
+    private string IgnoreSpinnerClass => $"spinner-border my-1 {IgnoreSpinnerColor}";
+
+    private string IgnoreSpinnerColor => hoveringIgnore ? "text-light" : "text-secondary";
+
+    private string BlockStyle => IconSize + BlockColor;
+
+    private string BlockSmallStyle => IconSize + "color: red;";
+
+    private string BlockColor => hoveringBlock ? "color: white;" : "color: red;";
+
+    private string BlockClass => $"btn btn-outline-danger {(ShowSpinner is 2 ? "" : "oi oi-ban")}";
+
+    private string BlockSmallClass => $"btn btn-link text-decoration-none {(ShowSpinner is 2 ? "" : "oi oi-ban")}";
+
+    private string BlockSpinnerClass => $"spinner-border my-1 {BlockSpinnerColor}";
+
+    private string BlockSpinnerColor => hoveringBlock ? "text-light" : "text-danger";
 
     private bool BlockInput = false;
 
     private int ShowSpinner = -1;
+
+    bool hoveringAccept = false;
+    bool hoveringIgnore = false;
+    bool hoveringBlock = false;
+
+    private void ToggleHovering_Accept() => hoveringAccept = !hoveringAccept;
+    private void ToggleHovering_Ignore() => hoveringIgnore = !hoveringIgnore;
+    private void ToggleHovering_Block() => hoveringBlock = !hoveringBlock;
 
     protected override async Task OnInitializedAsync()
     {
@@ -109,76 +161,6 @@
     private Task Wait()
     {
         return Task.Run(() => System.Threading.Thread.Sleep(500));
-    }
-
-    private async Task CreateAndAddBundle()
-    {
-        // when we accept a request we need to create a new bundle and send it to the other party, the other party generated their bundle when they sent the request
-        // import our identity keys
-        var keys = await bundleHandler.GetKeys(Id);
-
-        if (keys.X509IdentityKey != null && keys.IdentityPrivateKey != null)
-        {
-            // generate a new bundle and save it to the server
-            IKeyBundleModel bundle = encryptionClient.GenerateBundle(keys.X509IdentityKey, keys.IdentityPrivateKey);
-
-            if (bundle is KeyBundleModel b)
-            {
-                // add OUR bundle to THIER bundles
-                await bundleHandler.SetBundle(friend.Id, Id, b);
-            }
-
-            // since the other party already generated the bundle we can create the secret and save the state of our encryption client
-
-            IKeyBundleModel otherPartiesBundle = await bundleHandler.GetBundle(Id, friend.Id);
-
-            if (bundle != null)
-            {
-                if (encryptionClient.CreateSecretUsingBundle(otherPartiesBundle))
-                {
-                    // if we were able to sucessfully create a secret save our encryption state and remove the budle from our bundles
-                    string clientState = encryptionClient.ExportState();
-
-                    if (await encryptionStateHandler.SetState(Id, friend.Id, clientState))
-                    {
-                        // since we saved the state of our encryption client we can delete the bundle from the server
-                        if (await bundleHandler.RemoveBundle(Id, friend.Id))
-                        {
-                            logger.LogInformation("Sucessfully created secret and removed bundle from server for {Id}", Id);
-                        }
-                        else
-                        {
-                            logger.LogError("Failed to remove bundle for friend {FriendId} for {Id}", friend.Id, Id);
-                        }
-                    }
-                    else
-                    {
-                        logger.LogError("Failed to set encryption client state for {Id}", Id);
-                    }
-                }
-                else
-                {
-                    logger.LogError("Failed to create secret using Bundle for {Id}", Id);
-                }
-            }
-            else
-            {
-                logger.LogError("Failed to retrieve bundle for other party for {Id}", Id);
-            }
-        }
-        else
-        {
-            logger.LogError("Failed to {MethodName} for {Id} no keys retrieved from bundle handler", nameof(CreateAndAddBundle), Id);
-        }
-    }
-
-    private async Task IgnoreBundle()
-    {
-        // since we don't want to accept a request we should remove the bundle from our bundle list since we aren't going to use it
-        if (await bundleHandler.RemoveBundle(Id, friend.Id))
-        {
-            logger.LogInformation("Removed {FriendId} bundle for {Id}", friend.Id, Id);
-        }
     }
 
     private async Task AcceptRequest()
@@ -193,7 +175,10 @@
         await Wait();
 
         // create a shared secret and send our key bundle to the other party so we can chat
-        await CreateAndAddBundle();
+        await bundleProcessor.CreateSecretAndSendBundle(Id, friend.Id);
+
+        // create secret for other party
+        await bundleProcessor.CreateSecret(friend.Id, Id);
 
         // add the other person to our friendslist
         await friendHandler.AddFriend(Id, friend.Id);
@@ -226,7 +211,7 @@
         await Wait();
 
         // remove their encryption key bundle from our bundle list since we aren't going to use it
-        await IgnoreBundle();
+        await bundleHandler.RemoveBundle(Id, friend.Id);
 
         // remove them from our request list
         await friendHandler.RemoveRequest(Id, friend.Id);
@@ -254,7 +239,7 @@
         await Wait();
 
         // remove their encryption key bundle from our bundle list since we aren't going to use it
-        await IgnoreBundle();
+        await bundleHandler.RemoveBundle(Id, friend.Id);
 
         await friendHandler.BlockFriend(Id, friend.Id);
 

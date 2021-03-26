@@ -6,9 +6,22 @@
 
 <table class="table table-striped border rounded table-hover">
     <tbody>
-        @foreach (var item in Blocked)
+        @if (Blocked.Count == 0)
         {
-            <BlockEntry Id=@Id Blocked=@item BlockedPeople=@Blocked />
+            <tr scope="row">
+                <td class="d-flex justify-content-between">
+                    <div class="flex-grow-1 mx-1" style="text-align: center;">
+                        <span>@(NoBlockedMessage[rng.Next(0, NoBlockedMessage.Count)])</span>
+                    </div>
+                </td>
+            </tr>
+        }
+        else
+        {
+            @foreach (var item in Blocked)
+            {
+                <BlockEntry Id=@Id Blocked=@item BlockedPeople=@Blocked />
+            }
         }
     </tbody>
 </table>
@@ -18,6 +31,19 @@
     public string Id { get; set; }
 
     private List<IFriendModel> Blocked { get; set; } = new();
+
+    private Random rng = new();
+
+    private List<string> NoBlockedMessage = new()
+    {
+            "No one blocked! (✿◠‿◠)",
+            "Yay no meanies! (๑•́ ヮ •̀๑)",
+            "Put your enemies here! (ง •_•)ง",
+            "(︶︹︶) Sad that this is it's own tab! (╯°□°)╯︵ ┻━┻",
+            "ᕙ(`▽´)ᕗ Throw baddies here!",
+            "ԅ(≖‿≖ԅ) No wierdos yet ԅ(≖‿≖ԅ)",
+            "Put Karens here ꒡⌓꒡"
+        };
 
     protected override async Task OnInitializedAsync()
     {

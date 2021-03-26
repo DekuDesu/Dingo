@@ -47,11 +47,11 @@
 
     private string OnlineStatusClass => Status switch
     {
-        OnlineStatus.Busy => "btn btn-warning",
-        OnlineStatus.DoNotDisturb => "btn btn-danger",
-        OnlineStatus.Invisible => "btn btn-secondary",
-        OnlineStatus.LookingToChat => "btn btn-primary",
-        _ => "btn btn-success"
+        OnlineStatus.Busy => "btn btn-warning rounded-start",
+        OnlineStatus.DoNotDisturb => "btn btn-danger rounded-start",
+        OnlineStatus.Invisible => "btn btn-secondary rounded-start",
+        OnlineStatus.LookingToChat => "btn btn-primary rounded-start",
+        _ => "btn btn-success rounded-start"
     };
 
     private Task Wait()

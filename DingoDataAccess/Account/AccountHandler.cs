@@ -9,14 +9,16 @@ using DingoAuthentication.Encryption;
 
 namespace DingoDataAccess.Account
 {
-    public class AccountHandler : IAccountHandler
+    public class AccountHandler<TKeyBundleType, TSignedKeyModelType> : IAccountHandler
+        where TSignedKeyModelType : ISignedKeyModel, new()
+        where TKeyBundleType : IKeyBundleModel<TSignedKeyModelType>, new()
     {
         private readonly ISqlDataAccess db;
         private readonly ISqlDataAccess messagesDb;
-        private readonly ILogger<AccountHandler> logger;
+        private readonly ILogger<AccountHandler<TKeyBundleType, TSignedKeyModelType>> logger;
         private readonly IDisplayNameHandler displayNameHandler;
         private readonly IDiffieHellmanHandler diffieHellmanHandler;
-        private readonly IKeyAndBundleHandler<KeyBundleModel> bundleHandler;
+        private readonly IKeyAndBundleHandler<TKeyBundleType, TSignedKeyModelType> bundleHandler;
         private const string ConnectionStringName = "DingoUsersConnection";
         private const string MessagesConnectionStringName = "DingoMessagesConnection";
 
@@ -26,7 +28,7 @@ namespace DingoDataAccess.Account
         private const string MessagesCreateNewUserProcedure = "CreateUser";
         private const string MessagesDeleteUserProcedure = "DeleteUser";
 
-        public AccountHandler(ISqlDataAccess _db, ISqlDataAccess _messagesDb, ILogger<AccountHandler> _logger, IDisplayNameHandler _displayNameHandler, IDiffieHellmanHandler diffieHellmanHandler, IKeyAndBundleHandler<KeyBundleModel> bundleHandler)
+        public AccountHandler(ISqlDataAccess _db, ISqlDataAccess _messagesDb, ILogger<AccountHandler<TKeyBundleType, TSignedKeyModelType>> _logger, IDisplayNameHandler _displayNameHandler, IDiffieHellmanHandler diffieHellmanHandler, IKeyAndBundleHandler<TKeyBundleType, TSignedKeyModelType> bundleHandler)
         {
             db = _db;
             messagesDb = _messagesDb;

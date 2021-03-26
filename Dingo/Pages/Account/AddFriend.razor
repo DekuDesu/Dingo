@@ -3,60 +3,80 @@
 @inject NavigationManager NavManager
 @inject ILogger<ChangeUsername> logger
 
+@using DingoDataAccess.Models.Friends
+
 @inject IFriendHandler friendHandler
 @inject IFriendListHandler friendListHandler
 @inject IDisplayNameHandler displayNameHander
 @inject IValidator<DisplayNameModel> searchValidator
 
-@using DingoAuthentication.Encryption
-
-@inject IEncryptedClientStateHandler encryptionStateHandler
-@inject IEncryptionClient<EncryptedDataModel> encryptionClient
-@inject IKeyAndBundleHandler<KeyBundleModel> bundleHandler
-
+@inject IBundleProcessor bundleProcessor
 
 <EditForm Context="User" @bind-model="displayName" OnValidSubmit="@Submit">
-    <div class="row">
-        <h2>Add Friend</h2>
+    <div class="">
+        <InputText class="form-control my-2" @bind-Value=@displayName.DisplayName />
     </div>
-    <div class="row">
-        <div class="row">
-            <InputText class="form-control my-2" @bind-Value=@displayName.DisplayName />
-        </div>
-        <div class="row">
-            @if (SearchTermValidationFailures is not null)
+    <div class="">
+        @if (SearchTermValidationFailures is not null)
+        {
+            @foreach (var item in SearchTermValidationFailures)
             {
-                @foreach (var item in SearchTermValidationFailures)
-                {
-                    <p class="alert-warning rounded border">@item.ErrorMessage</p>
-                }
+                <p class="alert-warning rounded border">@item.ErrorMessage</p>
             }
-        </div>
-        <div class="row col-6">
-            <button type="submit" class=@ButtonClass>
-                <span class=@CheckClass role="status" aria-hidden="true" style=@CheckStyle></span>
-                <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style=@SpinnerStyle></span>
-                @ButtonText
-            </button>
-        </div>
+        }
+    </div>
+    <div style="text-align: center;">
+        <button type="submit" class=@ButtonClass>
+            <span class=@CheckClass role="status" aria-hidden="true" style=@CheckStyle></span>
+            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style=@SpinnerStyle></span>
+            @ButtonText
+        </button>
     </div>
 </EditForm>
 
 @code
 {
 
-    [Parameter]
-    public string Id { get; set; } = null;
+    [CascadingParameter(Name = "Id")]
+    protected string Id { get; set; } = null;
+
+    [CascadingParameter(Name = "MyFriendInfo")]
+    protected IFriendModel MyFriendInfo { get; set; }
 
     // make sure we get the display name
     [CascadingParameter]
     protected Task<AuthenticationState> AuthStat { get; set; }
 
     private string SpinnerStyle = "display: none";
+
     private string ButtonText = "Search";
-    private string ButtonClass = "btn btn-primary";
+
+    private string ButtonClass = "btn btn-primary px-4";
+
     private string CheckStyle = "display: none";
+
     private string CheckClass = "oi oi-check";
+
+    private Random rng = new();
+
+    private string[] NotFoundText = {
+        "Not Found 	(╥﹏╥)",
+        "ヽ(｀Д´)ﾉ Not Found",
+        "(≧︿≦) Not Found",
+        "ಡ_ಡ Not Found"
+    };
+    private string[] SearchingText = {
+        "☉ ‿ ⚆ Searching",
+        "Searching 	(ง ≖_≖)ง",
+        "Searching (ʘ‿ʘ)",
+        "(❍ᴥ❍ʋ) Searching"
+    };
+    private string[] SentText = {
+        "(・3・) Request Sent",
+        "Request Sent 	(ﾉ◕ヮ◕)ﾉ*:・ﾟ✧",
+        "Request Sent 	(ﾉ☉ヮ⚆)ﾉ",
+        "٩(^‿^)۶ Request Sent"
+    };
 
     private enum ButtonState
     {
@@ -82,9 +102,9 @@
         ButtonText = text ?? "Change";
         ButtonClass = state switch
         {
-            ButtonState.failed => "btn btn-danger",
-            ButtonState.completed => "btn btn-success",
-            _ => "btn btn-primary"
+            ButtonState.failed => "btn btn-danger px-4",
+            ButtonState.completed => "btn btn-success px-4",
+            _ => "btn btn-primary px-4"
         };
         CheckStyle = state == ButtonState.completed ? "" : "display: none;";
         CheckClass = state switch
@@ -94,58 +114,30 @@
         };
     }
 
-    private async Task CreateAndSendBundle(string FriendId)
-    {
-        // since we are sending a request we should create a key bundle for the other party to use to create a shared secret between us
-        // when we accept a request we need to create a new bundle and send it to the other party, the other party generated their bundle when they sent the request
-
-        // import our identity keys
-        var keys = await bundleHandler.GetKeys(Id);
-
-        if (keys.X509IdentityKey != null && keys.IdentityPrivateKey != null)
-        {
-            // generate a new bundle and save it to the server
-            IKeyBundleModel bundle = encryptionClient.GenerateBundle(keys.X509IdentityKey, keys.IdentityPrivateKey);
-
-            if (bundle is KeyBundleModel b)
-            {
-                // add OUR bundle to THIER bundles
-                await bundleHandler.SetBundle(FriendId, Id, b);
-            }
-
-            // save the state of our encryption client so we can create a secret later when we get the other persons bundle should they want to be friends
-
-            string clientState = encryptionClient.ExportState();
-
-            if (await encryptionStateHandler.SetState(Id, FriendId, clientState))
-            {
-                logger.LogInformation("Saved State for encryption client");
-            }
-            else
-            {
-                logger.LogError("Failed to set encryption client state for {Id}", Id);
-            }
-        }
-        else
-        {
-            logger.LogError("Failed to {MethodName} for {Id} no keys retrieved from bundle handler", nameof(CreateAndSendBundle), Id);
-        }
-    }
-
     private async Task Submit()
     {
         SearchTermValidationFailures?.Clear();
+
+        if (displayName is null)
+        {
+            displayName = new();
+            displayName.MyFullDisplayName = $"{MyFriendInfo.DisplayName}#{MyFriendInfo.UniqueIdentifier}";
+            return;
+        }
+
+        if (displayName.DisplayName is null)
+        {
+            return;
+        }
+
+        displayName.MyFullDisplayName = $"{MyFriendInfo.DisplayName}#{MyFriendInfo.UniqueIdentifier}";
 
         var validation = searchValidator.Validate(displayName);
 
         if (validation.IsValid)
         {
-            Task Wait()
-            {
-                return Task.Run(() => System.Threading.Thread.Sleep(500));
-            }
             // update the button to show that we are working on changing the name
-            UpdateButton("Searching", ButtonState.normal, true);
+            UpdateButton(SearchingText[rng.Next(0, SearchingText.Length)], ButtonState.normal, true);
 
             string foundId = await displayNameHander.GetIdFromDisplayName(displayName.DisplayName);
 
@@ -154,21 +146,21 @@
             if (foundId?.Length is null or 0)
             {
                 // don't allow users to know that we instantly invalidated their request
-                await Wait();
-                UpdateButton("Not Found", ButtonState.failed, false);
+                await Dingo.Helpers.Sleep(500);
+                UpdateButton(NotFoundText[rng.Next(0, NotFoundText.Length)], ButtonState.failed, false);
                 return;
             }
 
             // create and store our encryption budle so we can create a shared secret with that person
-            await CreateAndSendBundle(foundId);
+            await bundleProcessor.SendBundle(Id, foundId);
 
             await friendHandler.SendRequest(Id, foundId);
 
             // this is to make the user feel like the username has really been changed
-            await Wait();
+            await Dingo.Helpers.Sleep(500);
 
             // update the GUI to reflect the completed process
-            UpdateButton("Request Sent", ButtonState.completed, false);
+            UpdateButton(SentText[rng.Next(0, SentText.Length)], ButtonState.completed, false);
         }
         else
         {

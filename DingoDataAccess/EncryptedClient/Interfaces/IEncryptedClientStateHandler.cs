@@ -20,5 +20,13 @@ namespace DingoDataAccess
         /// <param name="State"></param>
         /// <returns></returns>
         Task<bool> SetState(string Id, string FriendId, string State);
+
+        /// <summary>
+        /// Deletes a state if its found in the users state dictionary. Returns true when no error encountered. False when either the params given are missing, corrupted, or contain possible SQL, or when error encoutered executing qwuery.
+        /// </summary>
+        /// <param name="Id"></param>
+        /// <param name="FriendId"></param>
+        /// <returns></returns>
+        Task<bool> DeleteState(string Id, string FriendId);
     }
 }

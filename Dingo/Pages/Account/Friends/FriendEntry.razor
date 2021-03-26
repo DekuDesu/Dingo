@@ -4,42 +4,46 @@
 @using DingoDataAccess.Models.Friends
 @using Dingo.Data.GeneralModels
 @using DingoDataAccess.Enums
+
+@using DingoAuthentication.Encryption
+
+@inject IEncryptedClientStateHandler clientStateHandler
+
 @implements IDisposable
 
 <tr scope="row">
-    <td class="col-lg-1 col-md-2 col-sm-3 col-2 align-middle">
-        <img src=@Friend.AvatarPath class="img-fluid rounded-circle" />
-
-    </td>
-    <td class="col-lg-11 col-md-10 col-sm-9 col-10 align-middle">
-        <div class="row">
-            <h4>
-                <span class="oi oi-media-record" title="media record" aria-hidden="true" style=@GetColor()></span>
+    <td class="d-flex justify-content-between">
+        <div class="mx-1 align-self-center">
+            <img src=@Friend.AvatarPath class="img-fluid rounded-circle " style="width: 64px; height: 64px;" />
+        </div>
+        <div class="flex-grow-1 mx-1">
+            <div>
+                <span class="oi oi-media-record" title=@GetStatusName() aria-hidden="true" style=@GetColor()></span>
                 <span style="color: black; font-weight:bold; font-size: large;">
                     @(Friend?.DisplayName ?? "Loading")
                     <span style="color: grey; font-size: 1em;">
                         #@(Friend?.UniqueIdentifier.ToString() ?? "")
                     </span>
                 </span>
-            </h4>
-        </div>
-        <div class="row" style="text-align: left;">
-            <div class="col">
-                <small>@GetStatusName()</small>
-                <button class="btn btn-outline-primary mx-4" @onclick=MessageFriend>
-                    <span class="oi oi-chat" title="chat" aria-hidden="true"></span>
+            </div>
+            <div>
+                <div class="d-inline">
+                    <small>@GetStatusName()</small>
+                </div>
+                <button class="d-inline btn btn-outline-primary mx-4" @onclick=MessageFriend>
+                    <span class="oi oi-chat" title="Message" aria-hidden="true"></span>
                 </button>
             </div>
-            <div class="dropdown col-3 mx-2 end-0" style="text-align: right;">
-                <a class="btn btn-primary dropdown-toggle" role="button" id="dropdownMenuLink" aria-expanded="false" @onclick=@ToggleShowDropdown>
-                    <span class="oi oi-cog" title="cog" aria-hidden="true"></span>
-                </a>
+        </div>
+        <div class="d-inline dropdown align-self-center" style="text-align: right;">
+            <a class="btn btn-primary dropdown-toggle" role="button" id="dropdownMenuLink" aria-expanded="false" @onclick=@ToggleShowDropdown>
+                <span class="oi oi-cog d-none d-sm-inline" title="Friend Options" aria-hidden="true"></span>
+            </a>
 
-                <ul class=@DropDownStyle aria-labelledby="dropdownMenuLink">
-                    <li><a class="dropdown-item" @onclick=@RemoveWithModal>Remove</a></li>
-                    <li><a class="dropdown-item" @onclick=@ReportWithModal>Report</a></li>
-                </ul>
-            </div>
+            <ul class=@DropDownStyle aria-labelledby="dropdownMenuLink">
+                <li><a class="dropdown-item" @onclick=@RemoveWithModal>Remove</a></li>
+                <li><a class="dropdown-item" @onclick=@ReportWithModal>Report</a></li>
+            </ul>
         </div>
     </td>
 </tr>
@@ -195,14 +199,22 @@
         }
         blockInput = true;
 
+        // delete any keys that they have for each other
+        await clientStateHandler.DeleteState(Id, Friend.Id);
+
+        await clientStateHandler.DeleteState(Friend.Id, Id);
+
+        // remove them from the friends list in the database
         await friendHandler.RemoveFriend(Id, Friend.Id);
 
         await friendHandler.RemoveFriend(Friend.Id, Id);
 
+        // update local list
         Friends.Remove(Friend);
 
         ShowRemoveModal = false;
 
+        // update UI
         StateChangedCallback?.Invoke();
 
         blockInput = false;

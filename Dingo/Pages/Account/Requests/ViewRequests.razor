@@ -8,9 +8,22 @@
 
 <table class="table table-striped border rounded table-hover">
     <tbody>
-        @foreach (var item in Requests)
+        @if (Requests.Count == 0)
         {
-            <Dingo.Pages.Account.Requests.RequestEntry Id=@Id friend=@item Requests=@Requests StateHasChangedCallback=@StateHasChangedCallback />
+            <tr scope="row">
+                <td class="d-flex justify-content-between">
+                    <div class="flex-grow-1 mx-1" style="text-align: center;">
+                        <span>@(NoRequestMessage[rng.Next(0, NoRequestMessage.Count)])</span>
+                    </div>
+                </td>
+            </tr>
+        }
+        else
+        {
+            @foreach (var item in Requests)
+            {
+                <Dingo.Pages.Account.Requests.RequestEntry Id=@Id friend=@item Requests=@Requests StateHasChangedCallback=@StateHasChangedCallback />
+            }
         }
     </tbody>
 </table>
@@ -24,6 +37,18 @@
     private int RefreshPollingRate = 15_000;
 
     private System.Timers.Timer RefreshTimer = new();
+
+    private Random rng = new();
+
+    private List<string> NoRequestMessage = new()
+    {
+            "No Pending Requests yet, try sending them one! ༼  ୧ ಠ ᴥ ಠ ༽ノ",
+            "Friends coming soon! (๑•́ ヮ •̀๑)",
+            "No Requests yet, but hopefully some soon! ٩(^‿^)۶",
+            "(✿◠‿◠) None yet, send them one instead!",
+            "ᕙ(`▽´)ᕗ None yet! Patience is strength!",
+            "※\\(^o^)/※ Send a request above! ※\\(^o^)/※",
+        };
 
     protected override async Task OnInitializedAsync()
     {

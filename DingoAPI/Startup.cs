@@ -44,7 +44,7 @@ namespace DingoAPI
             services.AddTransient<IDiffieHellmanHandler, DiffieHellmanHandler>();
             services.AddTransient<IKeyDerivationFunction, KeyDerivationFunction>();
             services.AddTransient(typeof(IKeyDerivationRatchet<EncryptedDataModel>), typeof(KeyDerivationRatchet<EncryptedDataModel>));
-            services.AddTransient<IKeyBundleModel, KeyBundleModel>();
+            services.AddTransient<IKeyBundleModel<SignedKeyModel>, KeyBundleModel<SignedKeyModel>>();
             services.AddTransient<ISignedKeyModel, SignedKeyModel>();
             services.AddTransient<ISignatureHandler, SignatureHandler>();
 

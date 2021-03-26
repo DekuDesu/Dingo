@@ -7,14 +7,29 @@
 
 @using DingoDataAccess.Models.Friends
 
-@foreach (var item in Messages)
+@if (Messages.Count == 0)
 {
-    <NavMessage Friend=@item />
+    <li class="nav-item px-3">
+        <div class="rounded-1 align-self-center py-2" style="text-align: center; background-color: darkslateblue;">
+            <span style="color: white; font-weight: bold;">
+                @NoMessagesText
+            </span>
+        </div>
+    </li>
+}
+else
+{
+    @foreach (var item in Messages)
+    {
+        <NavMessage Friend=@item />
+    }
 }
 
 @code {
     [CascadingParameter(Name = "Id")]
     protected string Id { get; set; }
+
+    private const string NoMessagesText = "ʕ•ᴥ•ʔ All Caught Up!";
 
     List<IFriendModel> Messages = new();
 
