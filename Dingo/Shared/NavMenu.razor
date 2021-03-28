@@ -42,9 +42,7 @@
             </NotAuthorized>
             <Authorized>
                 <li class="nav-item px-3 my-2 align-self-center" style="text-align: center; max-width: 500px;">
-                    <div class="">
-                        <img class="col-4 rounded-circle w-50 h-50 mx-auto d-block" src=@(MyFriendInfo?.AvatarPath ?? "/Images/DefaultAvatar.png") />
-                    </div>
+                    <Dingo.Pages.Account.Avatar />
                     <div class="">
                         <span class="text-wrap" style="max-width: 250px; color: white; font-weight:bold; font-size: large;">@(DisplayName ?? "Loading")</span>
                         <span style="color: grey; font-size: 1em; font-weight: bold;">
