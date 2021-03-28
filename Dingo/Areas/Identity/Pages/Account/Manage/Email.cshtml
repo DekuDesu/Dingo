@@ -5,10 +5,11 @@
     ViewData["ActivePage"] = ManageNavPages.Email;
 }
 
-<h4>@ViewData["Title"]</h4>
-<partial name="_StatusMessage" model="Model.StatusMessage" />
+
 <div class="row">
     <div class="col-md-9">
+        <h4>@ViewData["Title"]</h4>
+        <partial name="_StatusMessage" model="Model.StatusMessage" />
         <form id="email-form" method="post">
             <div asp-validation-summary="All" class="text-danger"></div>
             <div class="form-group">
@@ -28,40 +29,19 @@
                     <button id="email-verification" type="submit" asp-page-handler="SendVerificationEmail" class="btn btn-link">Send verification email</button>
                 }
             </div>
+
             <div class="form-group">
                 <label asp-for="Input.NewEmail"></label>
                 <input asp-for="Input.NewEmail" class="form-control" />
                 <span asp-validation-for="Input.NewEmail" class="text-danger"></span>
             </div>
+
             <button id="change-email-button" type="submit" asp-page-handler="ChangeEmail" class="btn btn-primary">Change email</button>
         </form>
     </div>
-    <div class="col-md-3 my-2">
-        <a class="btn btn-primary my-2" href="./TwoFactorAuthentication">
-            <span class="oi oi-phone mx-1" aria-hidden="true" height="50" width="50"></span>
-            Manage 2F Auth
-        </a>
-        <a class="btn btn-primary my-2" href="./EnableAuthenticator">
-            <span class="oi oi-shield mx-1" aria-hidden="true" height="50" width="50"></span>
-            Enable Authenticator
-        </a>
-        <a class="btn btn-primary my-2" href="./ChangePassword">
-            <span class="oi oi-key mx-1" aria-hidden="true" height="50" width="50"></span>
-            Change Password
-        </a>
-        <a class="btn btn-primary my-2" href="./Email">
-            <span class="oi oi-envelope-closed mx-1" aria-hidden="true" height="50" width="50"></span>
-            Update Email
-        </a>
-        <a class="btn btn-primary my-2" href="./PersonalData">
-            <span class="oi oi-folder mx-1" aria-hidden="true" height="50" width="50"></span>
-            Personal Data
-        </a>
-        <a class="btn btn-warning my-2" href="./DeletePersonalData">
-            <span class="oi oi-warning mx-1" aria-hidden="true" height="50" width="50"></span>
-            Delete Account
-        </a>
-    </div>
+
+    <partial name="_SettingsNav" model=null />
+
 </div>
 
 @section Scripts {

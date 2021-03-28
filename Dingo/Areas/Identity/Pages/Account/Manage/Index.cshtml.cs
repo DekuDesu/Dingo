@@ -35,6 +35,10 @@ namespace Dingo.Areas.Identity.Pages.Account.Manage
             [Phone]
             [Display(Name = "Phone number")]
             public string PhoneNumber { get; set; }
+
+            [EmailAddress]
+            [Display(Name = "Email")]
+            public string EmailAddress { get; set; }
         }
 
         private async Task LoadAsync(IdentityUser user)
@@ -46,7 +50,8 @@ namespace Dingo.Areas.Identity.Pages.Account.Manage
 
             Input = new InputModel
             {
-                PhoneNumber = phoneNumber
+                PhoneNumber = phoneNumber,
+                EmailAddress = userName
             };
         }
 
@@ -76,19 +81,34 @@ namespace Dingo.Areas.Identity.Pages.Account.Manage
                 return Page();
             }
 
-            var phoneNumber = await _userManager.GetPhoneNumberAsync(user);
-            if (Input.PhoneNumber != phoneNumber)
+            //var phoneNumber = await _userManager.GetPhoneNumberAsync(user);
+            //if (Input.PhoneNumber != phoneNumber)
+            //{
+            //    var setPhoneResult = await _userManager.SetPhoneNumberAsync(user, Input.PhoneNumber);
+            //    if (!setPhoneResult.Succeeded)
+            //    {
+            //        StatusMessage = "Unexpected error when trying to set phone number.";
+            //        return RedirectToPage();
+            //    }
+            //}
+
+            var email = await _userManager.GetUserNameAsync(user);
+
+            if (Input.EmailAddress != email)
             {
-                var setPhoneResult = await _userManager.SetPhoneNumberAsync(user, Input.PhoneNumber);
-                if (!setPhoneResult.Succeeded)
+                var setEmailResult = await _userManager.SetUserNameAsync(user, Input.EmailAddress);
+                var setEmailResult1 = await _userManager.SetEmailAsync(user, Input.EmailAddress);
+                if (!setEmailResult.Succeeded || !setEmailResult1.Succeeded)
                 {
-                    StatusMessage = "Unexpected error when trying to set phone number.";
+                    StatusMessage = "Unexpected error when trying to update email number.";
                     return RedirectToPage();
                 }
             }
 
             await _signInManager.RefreshSignInAsync(user);
+
             StatusMessage = "Your profile has been updated";
+
             return RedirectToPage();
         }
     }
