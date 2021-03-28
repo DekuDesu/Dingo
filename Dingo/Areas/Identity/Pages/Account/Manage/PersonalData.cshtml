@@ -5,47 +5,38 @@
     ViewData["ActivePage"] = ManageNavPages.PersonalData;
 }
 
-<h4>@ViewData["Title"]</h4>
 
 <div class="row">
-    <div class="col-md-9">
-        <p>Your account contains personal data that you have given us. This page allows you to download or delete that data.</p>
-        <p>
-            <strong>Deleting this data will permanently remove your account, and this cannot be recovered.</strong>
-        </p>
-        <form id="download-data" asp-page="DownloadPersonalData" method="post" class="form-group">
-            <button class="btn btn-primary" type="submit">Download</button>
-        </form>
-        <p>
-            <a id="delete" asp-page="DeletePersonalData" class="btn btn-primary">Delete</a>
-        </p>
+    <div class="col-md-9 d-flex flex-column" style="text-align: center;">
+        <div class="py-3">
+            <div class="h1 my-2" style="text-align:center; font-weight: bold;">
+                <span class="material-icons md-36" title="Personal Data">
+                    folder_shared
+                </span>
+                Personal Data
+            </div>
+            <p>
+                Dingo Collects information about your account when you sign up and during use
+            </p>
+            <p>
+                Download a copy of your personal information at any time
+            </p>
+            <form id="download-data" asp-page="DownloadPersonalData" method="post" class="form-group">
+                <button class="btn btn-primary" type="submit">Download</button>
+                <a id="delete" asp-page="DeletePersonalData" class="btn btn-primary">Delete Account</a>
+            </form>
+            <div class=" my-4" style="text-align: center;">
+                <p>
+                    Want to know how we use and store your information?
+                </p>
+                <div>
+                    <a href="#" class="btn btn-primary">Frequently Asked Questions</a>
+                </div>
+            </div>
+        </div>
     </div>
-    <div class="col-md-3 my-2">
-        <a class="btn btn-primary my-2" href="./TwoFactorAuthentication">
-            <span class="oi oi-phone mx-1" aria-hidden="true" height="50" width="50"></span>
-            Manage 2F Auth
-        </a>
-        <a class="btn btn-primary my-2" href="./EnableAuthenticator">
-            <span class="oi oi-shield mx-1" aria-hidden="true" height="50" width="50"></span>
-            Enable Authenticator
-        </a>
-        <a class="btn btn-primary my-2" href="./ChangePassword">
-            <span class="oi oi-key mx-1" aria-hidden="true" height="50" width="50"></span>
-            Change Password
-        </a>
-        <a class="btn btn-primary my-2" href="./Email">
-            <span class="oi oi-envelope-closed mx-1" aria-hidden="true" height="50" width="50"></span>
-            Update Email
-        </a>
-        <a class="btn btn-primary my-2" href="./PersonalData">
-            <span class="oi oi-folder mx-1" aria-hidden="true" height="50" width="50"></span>
-            Personal Data
-        </a>
-        <a class="btn btn-warning my-2" href="./DeletePersonalData">
-            <span class="oi oi-warning mx-1" aria-hidden="true" height="50" width="50"></span>
-            Delete Account
-        </a>
-    </div>
+
+    <partial name="_SettingsNav" model=null />
 </div>
 
 @section Scripts {

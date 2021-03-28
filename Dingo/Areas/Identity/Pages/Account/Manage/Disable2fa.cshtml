@@ -5,10 +5,10 @@
     ViewData["ActivePage"] = ManageNavPages.TwoFactorAuthentication;
 }
 
-<partial name="_StatusMessage" for="StatusMessage" />
-<h2>@ViewData["Title"]</h2>
 <div class="row">
     <div class="col-md-9">
+        <partial name="_StatusMessage" for="StatusMessage" />
+        <h2>@ViewData["Title"]</h2>
         <div class="alert alert-warning" role="alert">
             <p>
                 <strong>This action only disables 2FA.</strong>
@@ -25,30 +25,7 @@
             </form>
         </div>
     </div>
-    <div class="col-md-3 my-2">
-        <a class="btn btn-primary my-2" href="./TwoFactorAuthentication">
-            <span class="oi oi-phone mx-1" aria-hidden="true" height="50" width="50"></span>
-            Manage 2F Auth
-        </a>
-        <a class="btn btn-primary my-2" href="./EnableAuthenticator">
-            <span class="oi oi-shield mx-1" aria-hidden="true" height="50" width="50"></span>
-            Enable Authenticator
-        </a>
-        <a class="btn btn-primary my-2" href="./ChangePassword">
-            <span class="oi oi-key mx-1" aria-hidden="true" height="50" width="50"></span>
-            Change Password
-        </a>
-        <a class="btn btn-primary my-2" href="./Email">
-            <span class="oi oi-envelope-closed mx-1" aria-hidden="true" height="50" width="50"></span>
-            Update Email
-        </a>
-        <a class="btn btn-primary my-2" href="./PersonalData">
-            <span class="oi oi-folder mx-1" aria-hidden="true" height="50" width="50"></span>
-            Personal Data
-        </a>
-        <a class="btn btn-warning my-2" href="./DeletePersonalData">
-            <span class="oi oi-warning mx-1" aria-hidden="true" height="50" width="50"></span>
-            Delete Account
-        </a>
-    </div>
+
+    <partial name="_SettingsNav" model=null />
+
 </div>

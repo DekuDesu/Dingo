@@ -211,3 +211,39 @@ app {
         display: block;
     }
 }
+
+/* DINGO GRADIENTS */
+.gradient-primary {
+    background-image: linear-gradient(135deg, rgb(155, 250, 255) 0%, #8da9ff 70%);
+}
+
+.gradient-success {
+    background-image: linear-gradient(135deg, rgb(147, 255, 250) 0%, #94ffb9 70%);
+}
+
+.gradient-warning {
+    background-image: linear-gradient(135deg, rgb(255, 228, 147) 0%, #ff9494 70%);
+}
+
+.gradient-nav {
+    background-image: linear-gradient(180deg, rgb(5, 39, 103) 0%, #3a0647 70%);
+}
+/* DINGO GRADIENTS */
+
+/* GOOGLE MATERIAL ICONS CSS*/
+.material-icons.md-18 {
+    font-size: 18px;
+}
+
+.material-icons.md-24 {
+    font-size: 24px;
+}
+
+.material-icons.md-36 {
+    font-size: 36px;
+}
+
+.material-icons.md-48 {
+    font-size: 48px;
+}
+/* GOOGLE MATERIAL ICONS CSS*/

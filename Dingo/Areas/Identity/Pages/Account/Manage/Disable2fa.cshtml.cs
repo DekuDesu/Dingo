@@ -50,13 +50,16 @@ namespace Dingo.Areas.Identity.Pages.Account.Manage
             }
 
             var disable2faResult = await _userManager.SetTwoFactorEnabledAsync(user, false);
+
             if (!disable2faResult.Succeeded)
             {
                 throw new InvalidOperationException($"Unexpected error occurred disabling 2FA for user with ID '{_userManager.GetUserId(User)}'.");
             }
 
             _logger.LogInformation("User with ID '{UserId}' has disabled 2fa.", _userManager.GetUserId(User));
-            StatusMessage = "2fa has been disabled. You can reenable 2fa when you setup an authenticator app";
+
+            StatusMessage = "Two-Factor Authentication has been disabled. This puts your account at risk. You can setup another authenticator at any time.";
+
             return RedirectToPage("./TwoFactorAuthentication");
         }
     }
