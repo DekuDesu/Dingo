@@ -7,18 +7,33 @@
 
 
 <div class="row">
-    <div class="col-md-9">
-        <h4>@ViewData["Title"]</h4>
-        <p>Your account contains personal data that you have given us. This page allows you to download or delete that data.</p>
-        <p>
-            <strong>Deleting this data will permanently remove your account, and this cannot be recovered.</strong>
-        </p>
-        <form id="download-data" asp-page="DownloadPersonalData" method="post" class="form-group">
-            <button class="btn btn-primary" type="submit">Download</button>
-        </form>
-        <p>
-            <a id="delete" asp-page="DeletePersonalData" class="btn btn-primary">Delete</a>
-        </p>
+    <div class="col-md-9 d-flex flex-column" style="text-align: center;">
+        <div class="py-3">
+            <div class="h1 my-2" style="text-align:center; font-weight: bold;">
+                <span class="material-icons md-36" title="Personal Data">
+                    folder_shared
+                </span>
+                Personal Data
+            </div>
+            <p>
+                Dingo Collects information about your account when you sign up and during use
+            </p>
+            <p>
+                Download a copy of your personal information at any time
+            </p>
+            <form id="download-data" asp-page="DownloadPersonalData" method="post" class="form-group">
+                <button class="btn btn-primary" type="submit">Download</button>
+                <a id="delete" asp-page="DeletePersonalData" class="btn btn-primary">Delete Account</a>
+            </form>
+            <div class=" my-4" style="text-align: center;">
+                <p>
+                    Want to know how we use and store your information?
+                </p>
+                <div>
+                    <a href="#" class="btn btn-primary">Frequently Asked Questions</a>
+                </div>
+            </div>
+        </div>
     </div>
 
     <partial name="_SettingsNav" model=null />
