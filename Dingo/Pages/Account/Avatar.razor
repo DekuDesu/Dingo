@@ -1,0 +1,48 @@
+﻿@using DingoDataAccess.Models.Friends
+
+<div class="position-relative">
+    <div class="col-4 rounded-circle w-50 h-50 mx-auto d-block" @onmouseover=Hover_DimAvatar @onmouseout=Hover_UnDimAvatar>
+        <img class="col-4 rounded-circle w-100 h-100 mx-auto d-block" style=@AvatarStyle src=@(MyFriendInfo?.AvatarPath ?? "/Images/DefaultAvatar.png") />
+        <button class="position-absolute top-50 start-50 translate-middle btn btn-link" style=@EditButtonStyle @onclick=Change_Avatar>
+            <span class="oi oi-pencil py-1 d-none d-md-inline" style="color: white;"></span>
+            <div style="color: white; font-weight: bold;">
+                Change
+            </div>
+        </button>
+        <button class="position-absolute top-0 start-50 translate-middle btn btn-outline-light d-md-none" @onclick=Change_Avatar>
+            <span class="oi oi-pencil py-1" style="color: white;"></span>
+            <div style="color: white; font-weight: bold;">
+                Change
+            </div>
+        </button>
+    </div>
+</div>
+
+@code {
+    [CascadingParameter(Name = "Id")]
+    public string Id { get; set; }
+
+    [CascadingParameter(Name = "MyFriendInfo")]
+    public IFriendModel MyFriendInfo { get; set; }
+
+    private bool DimAvatar = false;
+
+    private string AvatarStyle => DimAvatar ? "filter: brightness(50%);" : "";
+
+    private string EditButtonStyle => DimAvatar ? "" : "display: none;";
+
+    private void Hover_DimAvatar()
+    {
+        DimAvatar = true;
+    }
+
+    private void Hover_UnDimAvatar()
+    {
+        DimAvatar = false;
+    }
+
+    private async Task Change_Avatar()
+    {
+        await Dingo.Helpers.Sleep(100);
+    }
+}

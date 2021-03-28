@@ -2,7 +2,7 @@
 
 @inject ILogger<Toasts> logger
 
-<div class="toast-container position-absolute top-0 end-0 p-3">
+<div class="toast-container position-absolute top-0 end-0 p-3" style="z-index: 1060;">
     @foreach (var item in toasts)
     {
         <Toast @key="item" toast=@item StateHasChangedCallback=@StateHasChangedCallback />
