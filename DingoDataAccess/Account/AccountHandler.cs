@@ -77,11 +77,13 @@ namespace DingoDataAccess.Account
             // create the friends list, blocked list, and request list for the user
             await db.ExecuteVoidProcedure(CreateNewUserProcedure, new { Id });
 
+            // create the user in the message DB as well
             await messagesDb.ExecuteVoidProcedure(MessagesCreateNewUserProcedure, new { Id });
 
             // create identity keys
             var (PublicKey, PrivateKey) = diffieHellmanHandler.GenerateKeys();
 
+            // store the keys
             await bundleHandler.SetKeys(Id, PublicKey, PrivateKey);
 
             logger.LogInformation("Finished creating new user {DisplayName}#{result} {Id}", DisplayName, result, Id);

@@ -72,12 +72,12 @@
                 <div id="qrCode"></div>
                 <div id="qrCodeData" data-url="@Html.Raw(@Model.AuthenticatorUri)"></div>
             </div>
-            <div>
-                <p>
-                    or manually enter code
-                </p>
-                <kbd>@Model.SharedKey</kbd>
-                <button class="btn btn-outline-primary my-1" title="Copy To Clipboard">
+            <p>
+                or manually enter code
+            </p>
+            <div class="input-group align-self-center " style="width: 55%;">
+                <input type="text" class="form-control font-monospace rounded-1" placeholder="@Model.SharedKey" value="@Model.SharedKey" id="SharedKey" aria-label="Authenticator Code" style="background-color: rgb(30,30,30); color: rgb(156,220,254); font-weight: bolder;">
+                <button class="btn btn-outline-secondary" type="button" onclick="CopyToClipBoard()">
                     <span class="oi oi-clipboard" title="Copy To Clipboard"></span>
                 </button>
             </div>
@@ -119,5 +119,20 @@
                 height: 150
             });
     </script>
+    <script type="text/javascript">
+        function CopyToClipBoard() {
+            /* Get the text field */
+            var copyText = document.getElementById("SharedKey");
 
+            /* Select the text field */
+            copyText.select();
+            copyText.setSelectionRange(0, 99999); /* For mobile devices */
+
+            /* Copy the text inside the text field */
+            document.execCommand("copy");
+
+            /* Alert the copied text */
+            alert("Copied the text: " + copyText.value);
+        }
+    </script>
 }
