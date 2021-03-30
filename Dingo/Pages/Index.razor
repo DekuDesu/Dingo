@@ -4,53 +4,24 @@
 
 @inject ILogger<Index> logger
 
+@implements IDisposable
+
 @using Dingo.Data.GeneralModels
 
 @code{
-    // We should load the user ID and username since it's used by components
-    [CascadingParameter(Name = "DisplayName")]
-    public string DisplayName { get; set; }
-
     [CascadingParameter(Name = "Id")]
     public string Id { get; set; }
 
     [CascadingParameter(Name = "TopLevel")]
     public TopLevelObjects TopLevel { get; set; }
 
-    private string PreviousFriendId = "-1";
-
-    [CascadingParameter]
-    protected Task<AuthenticationState> AuthStat { get; set; }
-
-    [CascadingParameter(Name = "messageCallbackReference")]
-    protected MessageCallbackReference messageCallbackReference { get; set; }
-
-    private async Task ViewMessageCallback()
-    {
-        await InvokeAsync(() => StateHasChanged());
-    }
-
-    protected override async Task OnInitializedAsync()
-    {
-        await base.OnInitializedAsync();
-
-        // setup the callback that is called when the usere clicks an unread message.
-        messageCallbackReference.Callback += ViewMessageCallback;
-    }
+    public void Dispose() => TopLevel?.Dispose();
 }
 
 <AuthorizeView>
-    @if (string.IsNullOrEmpty(messageCallbackReference.FriendId) is false)
+    @if (TopLevel?.ShowChatInterface is true && TopLevel?.CurrentChatId != null)
     {
-        if (messageCallbackReference.FriendId != PreviousFriendId)
-        {
-            PreviousFriendId = messageCallbackReference.FriendId;
-            <Dingo.Pages.Messaging.Message FriendId=@messageCallbackReference.FriendId />
-        }
-        else
-        {
-            <Dingo.Pages.Messaging.Message FriendId=@messageCallbackReference.FriendId />
-        }
+        <Dingo.Pages.Messaging.Message FriendId=@TopLevel.CurrentChatId />
     }
     else
     {

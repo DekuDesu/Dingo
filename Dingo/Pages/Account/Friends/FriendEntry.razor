@@ -9,8 +9,6 @@
 
 @inject IEncryptedClientStateHandler clientStateHandler
 
-@implements IDisposable
-
 <tr scope="row">
     <td class="d-flex justify-content-between">
         <div class="mx-1 align-self-center">
@@ -56,26 +54,14 @@
     <Dingo.Pages.Components.Modal Title=@ReportModalTitle Content=@ReportModalContent SubmitText="Report" CancelText="Cancel" CancelCallback=@ModalCancel SubmitCallback=@Report></Dingo.Pages.Components.Modal>
 }
 @code {
-    [CascadingParameter]
-    protected Action toastCallback { get; set; }
-
-    [CascadingParameter(Name = "messageCallbackReference")]
-    MessageCallbackReference messageCallbackReference { get; set; }
-
     [CascadingParameter(Name = "TopLevel")]
     protected TopLevelObjects TopLevel { get; set; }
 
-    [Parameter]
+    [CascadingParameter(Name = "Id")]
     public string Id { get; set; }
 
     [Parameter]
     public IFriendModel Friend { get; set; }
-
-    [Parameter]
-    public List<IFriendModel> Friends { get; set; }
-
-    [Parameter]
-    public Action StateChangedCallback { get; set; }
 
     private bool ShowRemoveModal = false;
     private bool ShowReportModal = false;
@@ -98,17 +84,13 @@
     private string RemoveModalTitle => $"Remove {Friend.DisplayName}#{Friend.UniqueIdentifier}?";
     private string RemoveModalContent => $"Are you sure you want to remove them from your friends list?";
 
-    protected override async Task OnInitializedAsync()
+    private void MessageFriend()
     {
-        await base.OnInitializedAsync();
+        TopLevel.CurrentChatId = Friend.Id;
 
-        logger.LogInformation("Initialized Component {ComponentName} Params: {Param1}:{Param1Value} {Param2}:{Param2Value} {Param3}:{Param3Value}", nameof(FriendEntry), nameof(Id), Id, nameof(Friend), Friend, nameof(toastCallback), toastCallback);
-    }
+        TopLevel.ShowChatInterface = true;
 
-    private async Task MessageFriend()
-    {
-        messageCallbackReference.FriendId = Friend.Id;
-        await messageCallbackReference.Callback?.Invoke();
+        TopLevel.StateHasChanged();
     }
 
     private string GetStatusName()
@@ -211,19 +193,13 @@
 
         await friendHandler.RemoveFriend(Friend.Id, Id);
 
-        // update local list
-        Friends.Remove(Friend);
-
         ShowRemoveModal = false;
 
+        TopLevel.Friends.Remove(Friend);
+
         // update UI
-        StateChangedCallback?.Invoke();
+        TopLevel.StateHasChanged();
 
         blockInput = false;
-    }
-
-    public void Dispose()
-    {
-        logger.LogInformation("Disposed friend entry");
     }
 }

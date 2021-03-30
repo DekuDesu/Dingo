@@ -10,20 +10,18 @@
     <CascadingValue Value=@Id Name="Id">
         <CascadingValue Value=@DisplayName Name="DisplayName">
             <CascadingValue Value=@MyFriendInfo Name="MyFriendInfo">
-                <CascadingValue Value=@messageCallbackReference Name="messageCallbackReference">
-                    <div class="sidebar">
-                        <NavMenu />
+                <div class="sidebar">
+                    <NavMenu />
+                </div>
+                <div class="main">
+                    <div class="content px-4">
+                        @Body
                     </div>
-                    <div class="main">
-                        <div class="content px-4">
-                            @Body
-                        </div>
-                    </div>
-                    <Dingo.Pages.Components.Toasts />
-                    <Dingo.Pages.Components.Modals />
-                    <Dingo.Pages.Account.ChangeAvatar />
-                    <Dingo.Pages.Account.ChangeUsername />
-                </CascadingValue>
+                </div>
+                <Dingo.Pages.Components.Toasts />
+                <Dingo.Pages.Components.Modals />
+                <Dingo.Pages.Account.ChangeAvatar />
+                <Dingo.Pages.Account.ChangeUsername />
             </CascadingValue>
         </CascadingValue>
     </CascadingValue>
@@ -39,19 +37,18 @@
     [Parameter]
     public IFriendModel MyFriendInfo { get; set; }
 
+    public readonly TopLevelObjects TopLevel = new();
+
     [Parameter]
     public MessageCallbackReference messageCallbackReference { get; set; } = new();
 
     [CascadingParameter]
     protected Task<AuthenticationState> AuthStat { get; set; }
 
-    /// <summary>
-    /// This is just an object that can be passed around to access objects that are invoked are rendered at the top level
-    /// </summary>
-    public TopLevelObjects TopLevel = new();
-
     protected override async Task OnInitializedAsync()
     {
+        await base.OnInitializedAsync();
+
         // only get the id and name if its not passed a param as a component
         // this helps reduce the # of requests to the DB
         // check to see if we need to get the display and id to change the name
@@ -62,9 +59,9 @@
             await SetOnlineStatus();
         }
 
-        TopLevel.StateHasChanged = TopLevelStateChange;
+        TopLevel.StateHasChanged = () => InvokeAsync(() => TopLevelStateChange());
 
-        await base.OnInitializedAsync();
+        await SetupTimers();
     }
 
     private async Task SetOnlineStatus()
@@ -108,5 +105,41 @@
     private void TopLevelStateChange()
     {
         StateHasChanged();
+    }
+
+    private async Task SetupTimers()
+    {
+        await TopLevel.AddTimer(15_000, GetFriendRequests, nameof(Dingo.Pages.Account.Requests.ViewRequests));
+        // make sure to set the override so when the user manually navigates to the request component they can force a refresh without having to wait
+        TopLevel.GetFriendRequests = GetFriendRequests;
+    }
+
+    private async Task GetFriendRequests()
+    {
+        var newRequests = await friendHandler.GetRequests(Id);
+
+        bool changed = false;
+
+        foreach (var item in newRequests)
+        {
+            if (TopLevel.WaitingRequestIds.Contains(item.Id) is false)
+            {
+                TopLevel.toasts.Add(new Data.GeneralModels.ToastModel()
+                {
+                    Content = $"{item.DisplayName}#{item.UniqueIdentifier} sent you a friend request.",
+                    Title = $"Friend Request",
+                    Timeout = TimeSpan.FromSeconds(20)
+                });
+
+                TopLevel.WaitingRequestIds.Add(item.Id);
+
+                changed = true;
+            }
+        }
+
+        if (changed)
+        {
+            TopLevel.FriendRequests = newRequests;
+        }
     }
 }

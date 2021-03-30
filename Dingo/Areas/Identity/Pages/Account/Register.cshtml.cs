@@ -90,8 +90,22 @@ namespace Dingo.Areas.Identity.Pages.Account
                 var user = new IdentityUser { UserName = Input.Email, Email = Input.Email };
                 var result = await _userManager.CreateAsync(user, Input.Password);
 
-                // create the dingo account since we purposely seperate authentication from actual user data
-                bool dingoResult = await accountHandler.CreateNewAccount(user.Id, Input.DisplayName);
+                bool dingoResult = false;
+
+                List<string> dingoErrors = new();
+
+                if (result.Succeeded is true)
+                {
+                    // create the dingo account since we purposely seperate authentication from actual user data
+                    dingoResult = await accountHandler.CreateNewAccount(user.Id, Input.DisplayName);
+                }
+
+                if (dingoResult is false)
+                {
+                    // if dingo failed delete the asp account so they can re-register
+                    await _userManager.DeleteAsync(user);
+                    dingoErrors.Add("Failed to create account, please try again later.");
+                }
 
                 if (result.Succeeded && dingoResult)
                 {
@@ -120,7 +134,11 @@ namespace Dingo.Areas.Identity.Pages.Account
                 }
                 foreach (var error in result.Errors)
                 {
-                    ModelState.AddModelError(string.Empty, error.Description);
+                    ModelState.AddModelError(string.Empty, error.Description.Replace("Username", "Email"));
+                }
+                foreach (var item in dingoErrors)
+                {
+                    ModelState.AddModelError(string.Empty, item);
                 }
             }
 

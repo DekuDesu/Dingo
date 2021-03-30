@@ -3,7 +3,7 @@
 @inject ILogger<Toasts> logger
 
 <div class="toast-container position-absolute top-0 end-0 p-3" style="z-index: 1060;">
-    @foreach (var item in TopLevel.toasts)
+    @foreach (var item in TopLevel?.toasts ?? new())
     {
         <Toast @key="item" toast=@item />
     }

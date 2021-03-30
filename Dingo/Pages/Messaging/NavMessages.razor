@@ -21,13 +21,16 @@ else
 {
     @foreach (var item in Messages)
     {
-        <NavMessage Friend=@item />
+        <NavMessage Friend=@item OnClick=@RemoveMessage />
     }
 }
 
 @code {
     [CascadingParameter(Name = "Id")]
     protected string Id { get; set; }
+
+    [CascadingParameter(Name = "TopLevel")]
+    public TopLevelObjects TopLevel { get; set; }
 
     private const string NoMessagesText = "ʕ•ᴥ•ʔ All Caught Up!";
 
@@ -37,44 +40,82 @@ else
 
     System.Timers.Timer CheckForMessagesTimer = new();
 
+    private async Task RemoveMessage(IFriendModel friend)
+    {
+        Messages.Remove(friend);
+
+        TopLevel.WaitingSenderIds.Remove(friend.Id);
+
+        await InvokeAsync(() => StateHasChanged());
+    }
+
     private async Task LoadMessages()
     {
-        await Dingo.Helpers.Sleep(100);
-
-        Messages.Clear();
-
+        if (TopLevel is null)
+        {
+            return;
+        }
         List<IMessageModel> waitingMessages = await messageHandler.GetMessages(Id);
 
         if (waitingMessages is null)
         {
+            Messages.Clear();
             return;
         }
 
-        Messages.Clear();
+        List<(string Id, DateTime TimeSent)> Ids = new();
 
-        List<string> Ids = new();
+        bool listChanged = false;
 
         foreach (var item in waitingMessages)
         {
-            if (Ids.Contains(item.SenderId) is false)
+            if (TopLevel.WaitingSenderIds.Contains(item.SenderId) is false)
             {
-                Ids.Add(item.SenderId);
+                TopLevel.WaitingSenderIds.Add(item.SenderId);
+
+                Ids.Add((item.SenderId, item.TimeSent));
+
+                listChanged = true;
+            }
+        }
+
+        // if the list hasnt changed return
+        if (listChanged is false)
+        {
+            return;
+        }
+
+        // remove the read messages
+        foreach (var item in TopLevel.WaitingSenderIds)
+        {
+            var found = Messages.Where(x => x.Id == item).FirstOrDefault();
+            if (found != default)
+            {
+                Messages.Remove(found);
             }
         }
 
         foreach (var item in Ids)
         {
-            Messages.Add(await friendHandler.GetFriend(item));
+            var friend = await friendHandler.GetFriend(item.Id);
+
+            Messages.Add(friend);
+
+            TopLevel.toasts.Add(new Data.GeneralModels.ToastModel()
+            {
+                Content = $"{friend.DisplayName}#{friend.UniqueIdentifier} sent you a message.",
+                Title = $"New Message",
+                Timeout = TimeSpan.FromSeconds(10),
+                TimeSent = item.TimeSent
+            });
         }
 
-        await InvokeAsync(() => StateHasChanged());
+        await InvokeAsync(() => TopLevel?.StateHasChanged?.Invoke());
     }
 
     protected override async Task OnInitializedAsync()
     {
         await base.OnInitializedAsync();
-
-        logger.LogInformation("Initialized Component {ComponentName} Params: {Param1}:{Param1Value}", nameof(NavMessages), nameof(Id), Id);
 
         await LoadMessages();
 

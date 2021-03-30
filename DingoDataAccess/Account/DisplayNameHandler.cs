@@ -124,19 +124,17 @@ namespace DingoDataAccess.Account
 
             try
             {
-                // check to make sure the unique id for this person isn't taken for the next username they are switching to
-                if (await UniqueIdentifierAvailable(newDisplayName, myFriendInfo.UniqueIdentifier) is false)
+                if (myFriendInfo != null)
                 {
-                    // since the indentifier was taken get another one and then set it
-                    short? newUniqueId = await GetAvailableUniqueIdentifier(newDisplayName);
-
-                    if (newUniqueId is null)
+                    // check to make sure the unique id for this person isn't taken for the next username they are switching to
+                    if (await UniqueIdentifierAvailable(newDisplayName, myFriendInfo.UniqueIdentifier) is false)
                     {
-                        logger.LogError("Failed to change for {Id} Name: {NewDisplayName} null unique Id retrieved", Id, newDisplayName);
-                        return false;
+                        await SetRandomUniqueIdentifier(Id, newDisplayName);
                     }
-
-                    await SetUniqueIdentifier(myFriendInfo.Id, (short)newUniqueId);
+                }
+                else
+                {
+                    await SetRandomUniqueIdentifier(Id, newDisplayName);
                 }
 
                 // change or set the name
@@ -244,6 +242,30 @@ namespace DingoDataAccess.Account
             catch (Exception e)
             {
                 logger.LogError("Failed to check if identifier take Error:{Error}", e);
+                return false;
+            }
+        }
+
+        private async Task<bool> SetRandomUniqueIdentifier(string Id, string DisplayName)
+        {
+            try
+            {
+                // since the indentifier was taken get another one and then set it
+                short? newUniqueId = await GetAvailableUniqueIdentifier(DisplayName);
+
+                if (newUniqueId is null)
+                {
+                    logger.LogError("Failed to change for {Id} Name: {NewDisplayName} null unique Id retrieved", Id, DisplayName);
+                    return false;
+                }
+
+                await SetUniqueIdentifier(Id, (short)newUniqueId);
+
+                return true;
+            }
+            catch (Exception e)
+            {
+                logger.LogError("Failed to change for {Id} Name: {NewDisplayName} Error: {Error}", Id, DisplayName, e);
                 return false;
             }
         }

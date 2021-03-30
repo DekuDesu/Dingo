@@ -1,10 +1,10 @@
 ﻿
-@foreach (var item in TopLevel.modals)
+@foreach (var item in TopLevel?.modals ?? new())
 {
     <Modal CancelCallback=@item.CancelCallback CancelText=@item.CancelText Content=@item.Content SubmitCallback=@item.SubmitCallback SubmitText=@item.SubmitText Title=@item.Title DisplayTextAsRawHTML=@item.DisplayTextAsRawHTML />
 }
 
 @code {
     [CascadingParameter(Name = "TopLevel")]
-    protected TopLevelObjects TopLevel { get; set; } = new();
+    protected TopLevelObjects TopLevel { get; set; }
 }

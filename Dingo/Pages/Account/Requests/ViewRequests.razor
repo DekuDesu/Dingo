@@ -8,7 +8,7 @@
 
 <table class="table table-striped border rounded table-hover">
     <tbody>
-        @if (Requests.Count == 0)
+        @if (TopLevel.FriendRequests.Count == 0)
         {
             <tr scope="row">
                 <td class="d-flex justify-content-between">
@@ -20,9 +20,9 @@
         }
         else
         {
-            @foreach (var item in Requests)
+            @foreach (var item in TopLevel.FriendRequests)
             {
-                <Dingo.Pages.Account.Requests.RequestEntry Id=@Id friend=@item Requests=@Requests StateHasChangedCallback=@StateHasChangedCallback />
+                <Dingo.Pages.Account.Requests.RequestEntry Id=@Id friend=@item />
             }
         }
     </tbody>
@@ -32,11 +32,10 @@
     [Parameter]
     public string Id { get; set; }
 
-    private List<IFriendModel> Requests { get; set; } = new();
+    [CascadingParameter(Name = "TopLevel")]
+    public TopLevelObjects TopLevel { get; set; }
 
-    private int RefreshPollingRate = 15_000;
-
-    private System.Timers.Timer RefreshTimer = new();
+    bool ShowToasts = true;
 
     private Random rng = new();
 
@@ -52,36 +51,14 @@
 
     protected override async Task OnInitializedAsync()
     {
-        await GetRequests();
+        await TopLevel?.GetFriendRequests?.Invoke();
 
         await base.OnInitializedAsync();
-
-        logger.LogInformation("Initialized Component {ComponentName} Params: {Param1}:{Param1Value}", nameof(ViewRequests), nameof(Id), Id);
-
-        RefreshTimer.Elapsed += async (x, y) => await GetRequests();
-        RefreshTimer.Interval = RefreshPollingRate;
-        RefreshTimer.AutoReset = true;
-        RefreshTimer.Start();
-    }
-
-    private async Task GetRequests()
-    {
-        logger.LogInformation("Fetching request list for {Id}", Id);
-
-        Requests = await friendHandler.GetRequests(Id);
-
-        await InvokeAsync(() => StateHasChanged());
-    }
-
-    private void StateHasChangedCallback()
-    {
-        StateHasChanged();
     }
 
     public void Dispose()
     {
-        RefreshTimer?.Stop();
-        RefreshTimer?.Close();
-        RefreshTimer?.Dispose();
+        // when index is diposed it will dispose this timer automatically
+        //TopLevel.RemoveTimer(nameof(ViewRequests)).Wait();
     }
 }

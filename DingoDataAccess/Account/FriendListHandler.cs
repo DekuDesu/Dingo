@@ -50,8 +50,6 @@ namespace DingoDataAccess.Account
 
             friends = Newtonsoft.Json.JsonConvert.DeserializeObject<List<string>>(result);
 
-            logger.LogInformation("Retrived friends list for {Id} List: {RawList}", Id, result);
-
             return friends;
         }
 
@@ -62,8 +60,6 @@ namespace DingoDataAccess.Account
             {
                 return false;
             }
-
-            logger.LogInformation("Setting friends list for {Id} List: {RawList}", Id, friendsList);
 
             var FriendsList = Newtonsoft.Json.JsonConvert.SerializeObject(friendsList);
 
@@ -108,8 +104,6 @@ namespace DingoDataAccess.Account
 
             blockedIds = Newtonsoft.Json.JsonConvert.DeserializeObject<List<string>>(result);
 
-            logger.LogInformation("Retrived blocked list for {Id} List: {RawList}", Id, result);
-
             return blockedIds;
         }
 
@@ -120,8 +114,6 @@ namespace DingoDataAccess.Account
             {
                 return false;
             }
-
-            logger.LogInformation("Setting request list for {Id} List: {RawList}", Id, requestIds);
 
             var RequestList = Newtonsoft.Json.JsonConvert.SerializeObject(requestIds);
 
@@ -148,8 +140,6 @@ namespace DingoDataAccess.Account
             }
 
             requests = Newtonsoft.Json.JsonConvert.DeserializeObject<List<string>>(result);
-
-            logger.LogInformation("Retrived friends list for {Id} List: {RawList}", Id, result);
 
             return requests;
         }
