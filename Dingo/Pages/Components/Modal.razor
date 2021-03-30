@@ -1,12 +1,19 @@
-﻿<div class=@ModelClass id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true" style=@ModalStyle>
+﻿<div class=@ModelClass tabindex="-1" aria-hidden="true" style=@ModalStyle>
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="exampleModalLabel">@Title</h5>
+                <h5 class="modal-title">@Title</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" @onclick=@Cancel></button>
             </div>
             <div class="modal-body">
-                @Content
+                @if (DisplayTextAsRawHTML)
+                {
+                    @((MarkupString)Content)
+                }
+                else
+                {
+                    @Content
+                }
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" @onclick=@Cancel>@CancelText</button>
@@ -19,10 +26,13 @@
 @code {
     [Parameter]
     public string Title { get; set; } = "Confirm";
+
     [Parameter]
-    public string Content { get; set; } = "Are you sure?";
+    public string Content { get; set; }
+
     [Parameter]
     public string CancelText { get; set; } = "Cancel";
+
     [Parameter]
     public string SubmitText { get; set; } = "Continue";
 
@@ -31,6 +41,9 @@
 
     [Parameter]
     public Func<Task> CancelCallback { get; set; }
+
+    [Parameter]
+    public bool DisplayTextAsRawHTML { get; set; } = false;
 
     private string ModelClass => ShowModal ? "modal fade show" : "modal fade";
     private string ModalStyle => ShowModal ? "display: unset;" : "display: none;";
@@ -45,9 +58,13 @@
         {
             return;
         }
+
         blockInput = true;
 
-        await CancelCallback?.Invoke();
+        if (CancelCallback != null)
+        {
+            await CancelCallback?.Invoke();
+        }
 
         ShowModal = false;
 
@@ -62,7 +79,10 @@
         }
         blockInput = true;
 
-        await SubmitCallback?.Invoke();
+        if (SubmitCallback != null)
+        {
+            await SubmitCallback?.Invoke();
+        }
 
         ShowModal = false;
 

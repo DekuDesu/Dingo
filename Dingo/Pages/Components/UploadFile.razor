@@ -1,0 +1,117 @@
+﻿@using System.IO
+@inject ILogger<UploadFile> logger
+
+<div style="text-align: left;">
+    <label class="form-label" style=@MaxFileSizeStyle>Max @GetMaxFileSizeText()</label>
+    <label class="form-label" style=@AllowableExtensionsStyle>@AllowableExtensions</label>
+    @if (AllowMultiple)
+    {
+
+        <div class="input-group mb-3">
+            <InputFile class="form-control" OnChange="OnFileChange" multiple></InputFile>
+        </div>
+    }
+    else
+    {
+        <div class="input-group mb-3">
+            <InputFile class="form-control" OnChange="OnFileChange"></InputFile>
+        </div>
+    }
+</div>
+
+@code {
+    /// <summary>
+    /// Max file size in bytes, default 5 KB
+    /// </summary>
+    [Parameter]
+    public int MaxFileSize { get; set; } = 1024 * 5;
+
+    /// <summary>
+    /// Whether to allow multiple files or only a single file
+    /// </summary>
+    [Parameter]
+    public bool AllowMultiple { get; set; } = false;
+
+    [Parameter]
+    public int MaxFiles { get; set; } = 3;
+
+    [Parameter]
+    public string Label { get; set; } = "";
+
+    /// <summary>
+    /// This callback is invoked when the files are uploaded
+    /// </summary>
+    [Parameter]
+    public Func<IEnumerable<(string Name, string Base64Data)>, Task> OnUploadedCallback { get; set; }
+
+    [Parameter]
+    public IEnumerable<string> AllowableFileExtensions { get; set; } = new List<string>();
+
+    private string AllowableExtensions => String.Join(" ", AllowableFileExtensions.ToArray());
+
+    private string AllowableExtensionsStyle = "font-weight: bold; color: red;";
+
+    private string MaxFileSizeStyle = "font-weight: bold; color: black;";
+
+    private List<(string Path, string Base64Data)> UploadedFiles = new();
+
+    public bool Uploading = false;
+
+    private const int GB = MB * 1024;
+    private const int MB = KB * 1024;
+    private const int KB = 1024;
+    private string GetMaxFileSizeText()
+    {
+        return MaxFileSize switch
+        {
+            (> GB) => $"{ (MaxFileSize - MaxFileSize % GB) / GB} GB",
+            (> MB) => $"{ (MaxFileSize - MaxFileSize % (MB)) / MB} MB",
+            (> KB) => $"{ (MaxFileSize - MaxFileSize % (KB)) / KB} KB",
+            _ => $"{MaxFileSize} bits"
+        };
+    }
+
+    private async Task OnFileChange(InputFileChangeEventArgs args)
+    {
+        UploadedFiles.Clear();
+
+        Uploading = true;
+
+        try
+        {
+            foreach (var item in args.GetMultipleFiles(AllowMultiple ? MaxFiles : 1))
+            {
+                // make sure we only read the files that are allowed
+                if (AllowableFileExtensions.Count() > 0)
+                {
+                    if (AllowableFileExtensions.Contains(Path.GetExtension(item.Name)) is false)
+                    {
+                        continue;
+                    }
+                }
+
+
+
+                string ext = System.IO.Path.GetExtension(item.Name);
+
+                // hash the file name since we can't trust it
+                string hashedName = BitConverter.ToString(System.Security.Cryptography.MD5.HashData(System.Text.UnicodeEncoding.Unicode.GetBytes(item.Name)));
+
+                var buffers = new byte[item.Size];
+
+                await item.OpenReadStream(MaxFileSize).ReadAsync(buffers);
+
+                UploadedFiles.Add((hashedName + ext, Convert.ToBase64String(buffers)));
+            }
+        }
+        catch (Exception e)
+        {
+            logger.LogError("Error in uploading file Error: {Error}", e);
+        }
+
+        // send the information back to the parent object
+        await OnUploadedCallback(UploadedFiles);
+
+        Uploading = false;
+    }
+}

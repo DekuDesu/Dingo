@@ -91,7 +91,7 @@
             <div class="align-self-center">
                 <form id="send-code" method="post">
                     <div class="form-group">
-                        <input asp-for="Input.Code" class="form-control" autocomplete="off" />
+                        <input asp-for="Input.Code" class="form-control text-wrap" autocomplete="off" />
                         <span asp-validation-for="Input.Code" class="text-danger"></span>
                     </div>
                     <button type="submit" class="btn btn-primary">Verify Code</button>
@@ -130,9 +130,6 @@
 
             /* Copy the text inside the text field */
             document.execCommand("copy");
-
-            /* Alert the copied text */
-            alert("Copied the text: " + copyText.value);
         }
     </script>
 }

@@ -1,0 +1,47 @@
+﻿<div class="input-group flex-grow-1 my-2">
+    <a class="flex-grow-1" href="/Identity/Account/Logout" title="Logout" style="text-decoration: none;">
+        <span class="oi oi-account-logout mx-auto" aria-hidden="true"></span>
+    </a>
+    <a class="flex-grow-1 d-none d-md-block" href="/Identity/Account/Manage" title="Manage Account" style="text-decoration: none;">
+        <span class="oi oi-cog mx-auto" aria-hidden="true"></span>
+    </a>
+    <button class="btn btn-outline-secondary dropdown-toggle d-md-none" type="button" data-bs-toggle="dropdown" aria-expanded="false" @onclick=@ToggleDropdown style="color: white;">
+        <span class="oi oi-cog mx-auto" aria-hidden="true"></span>
+    </button>
+    <ul class=@DropDownClass style="color: black;">
+        <li><span class="dropdown-item" @onclick="ChangeAvatar">Change Avatar</span></li>
+        <li><span class="dropdown-item" @onclick="ChangeDisplayName">Change Display Name</span></li>
+        <li><hr class="dropdown-divider"></li>
+        <li><a class="dropdown-item" href="/Identity/Account/Manage" style="color: black;">Settings</a></li>
+    </ul>
+</div>
+
+@code {
+    [CascadingParameter(Name = "TopLevel")]
+    public TopLevelObjects TopLevel { get; set; }
+
+    private bool ShowDropDown = false;
+
+    private string DropDownClass => ShowDropDown ? "dropdown-menu show d-md-none" : "dropdown-menu d-md-none";
+
+    private void ToggleDropdown()
+    {
+        ShowDropDown = !ShowDropDown;
+    }
+
+    private void ChangeAvatar()
+    {
+        ToggleDropdown();
+
+        TopLevel.ShowChangeAvatar = true;
+        TopLevel.StateHasChanged();
+    }
+
+    private void ChangeDisplayName()
+    {
+        ToggleDropdown();
+
+        TopLevel.ShowChangeDisplayName = true;
+        TopLevel.StateHasChanged();
+    }
+}

@@ -169,6 +169,8 @@ namespace Dingo
             services.AddTransient(typeof(IEncryptionClient<EncryptedDataModel, SignedKeyModel>), typeof(EncryptionClient<EncryptedDataModel, KeyBundleModel<SignedKeyModel>, SignedKeyModel>));
 
             services.AddTransient(typeof(IBundleProcessor), typeof(BundleProcessor<KeyBundleModel<SignedKeyModel>, EncryptedDataModel, SignedKeyModel>));
+
+            services.AddTransient<IAvatarHandler, AvatarHandler>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

@@ -10,7 +10,7 @@
 
 <div class="top-row pl-4 navbar navbar-dark">
     <a class="navbar-brand mx-4" href="" @onclick=ResetMessageCallbackReference>
-        <img src="/Images/Dingo256.png" class="" height="50" width="50" /> Dingo
+        <img src="/Images/Dingo256.webp" class="" height="50" width="50" /> Dingo
     </a>
     <button class="navbar-toggler" @onclick="ToggleNavMenu">
         <span class="navbar-toggler-icon"></span>
@@ -41,22 +41,18 @@
                 </li>
             </NotAuthorized>
             <Authorized>
-                <li class="nav-item px-3 my-2 align-self-center" style="text-align: center; max-width: 500px;">
+                <li class="nav-item px-3 my-2 align-self-center w-100" style="text-align: center; max-width: 500px;">
                     <Dingo.Pages.Account.Avatar />
                     <div class="">
+                        <span class="oi oi-pencil py-1 d-none d-md-inline mx-1" style="color: white;cursor:pointer;" @onclick="ShowEditDisplayName"></span>
                         <span class="text-wrap" style="max-width: 250px; color: white; font-weight:bold; font-size: large;">@(DisplayName ?? "Loading")</span>
                         <span style="color: grey; font-size: 1em; font-weight: bold;">
                             #@(MyFriendInfo?.UniqueIdentifier.ToString() ?? "Loading")
                         </span>
                     </div>
-                    <div class="input-group flex-grow-1 my-2">
-                        <a class="flex-grow-1" href="/Identity/Account/Logout" title="Logout" style="text-decoration: none;">
-                            <span class="oi oi-account-logout mx-auto" aria-hidden="true"></span>
-                        </a>
-                        <a class="flex-grow-1" href="/Identity/Account/Manage" title="Manage Account" style="text-decoration: none;">
-                            <span class="oi oi-cog mx-auto" aria-hidden="true"></span>
-                        </a>
-                    </div>
+
+                    <Dingo.Pages.Account.NavButtons />
+
                     <div class="row">
                         <Dingo.Pages.Account.StatusDropDown />
                     </div>
@@ -85,6 +81,9 @@
 
     [CascadingParameter(Name = "messageCallbackReference")]
     protected MessageCallbackReference messageCallbackReference { get; set; }
+
+    [CascadingParameter(Name = "TopLevel")]
+    public TopLevelObjects TopLevel { get; set; }
 
     private bool collapseNavMenu = true;
 
@@ -119,6 +118,11 @@
     private void ToggleNavMenu()
     {
         collapseNavMenu = !collapseNavMenu;
+    }
+
+    private void ShowEditDisplayName()
+    {
+        TopLevel.ShowChangeDisplayName = true;
     }
 
     public void Dispose()

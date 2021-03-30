@@ -22,11 +22,8 @@
     [Parameter]
     public ToastModel toast { get; set; } = new();
 
-    [Parameter]
-    public Action StateHasChangedCallback { get; set; }
-
-    [Parameter]
-    public List<ToastModel> toasts { get; set; }
+    [CascadingParameter(Name = "TopLevel")]
+    public TopLevelObjects TopLevel { get; set; }
 
     private double ProgressValue = 100;
 
@@ -46,16 +43,23 @@
         if (toast.Timeout != default)
         {
             AutoCloseTimer = new Timer();
+
             AutoCloseTimer.Interval = toast.Timeout.TotalMilliseconds;
+
             AutoCloseTimer.Elapsed += (x, y) => InvokeAsync(() => Close());
+
             UpdateProgressTimer = new Timer();
+
             UpdateProgressTimer.Interval = toast.Timeout.TotalMilliseconds / 200;
+
             UpdateProgressTimer.Elapsed += (x, y) =>
             {
                 ProgressValue -= 0.5;
                 InvokeAsync(() => StateHasChanged());
             };
+
             UpdateProgressTimer.AutoReset = true;
+
             AutoCloseTimer.Start();
             UpdateProgressTimer.Start();
         }
@@ -64,6 +68,7 @@
     private async Task Close()
     {
         toast.Remove = true;
+
         if (toast != null)
         {
             if (toast.OnClose != null)
@@ -71,10 +76,15 @@
                 await toast?.OnClose?.Invoke();
             }
         }
+
         AutoCloseTimer?.Stop();
         AutoCloseTimer?.Dispose();
+
         UpdateProgressTimer?.Stop();
         UpdateProgressTimer?.Dispose();
-        StateHasChangedCallback?.Invoke();
+
+        TopLevel.toasts.Remove(toast);
+
+        TopLevel.StateHasChanged?.Invoke();
     }
 }

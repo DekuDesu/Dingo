@@ -15,17 +15,19 @@ namespace DingoDataAccess.Account
         private readonly ISqlDataAccess db;
         private readonly ILogger<FriendHandler<TFriendModelType>> logger;
         private readonly IFriendListHandler friendListHandler;
+        private readonly IAvatarHandler avatarHandler;
         private static QueryCache<TFriendModelType, dynamic> Cache;
 
         private const string DatabaseConnectionName = "DingoUsersConnection";
 
         private const string GetFriendProcedure = "GetFriend";
 
-        public FriendHandler(ISqlDataAccess db, ILogger<FriendHandler<TFriendModelType>> _logger, ILogger<QueryCache<TFriendModelType, dynamic>> cacheLogger, IFriendListHandler _friendListHandler)
+        public FriendHandler(ISqlDataAccess db, ILogger<FriendHandler<TFriendModelType>> _logger, ILogger<QueryCache<TFriendModelType, dynamic>> cacheLogger, IFriendListHandler _friendListHandler, IAvatarHandler _avatarHandler)
         {
             this.db = db;
             logger = _logger;
             friendListHandler = _friendListHandler;
+            avatarHandler = _avatarHandler;
             this.db.ConnectionStringName = DatabaseConnectionName;
             Cache = new(cacheLogger);
         }
@@ -102,6 +104,9 @@ namespace DingoDataAccess.Account
             result = await db.ExecuteSingleProcedure<TFriendModelType, dynamic>(GetFriendProcedure, parameters);
 
             await Cache.UpdateOrCache(GetFriendProcedure, parameters, result);
+
+            // get the avatar for the user, this is segregated into it's own table incase further more serious segregation is needed
+            result.AvatarPath = await avatarHandler.GetAvatar(result.Id) ?? "/Images/DefaultAvatar.webp";
 
             return result;
         }

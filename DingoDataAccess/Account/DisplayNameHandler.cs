@@ -15,7 +15,7 @@ namespace DingoDataAccess.Account
     {
         private readonly ILogger logger;
         private readonly ISqlDataAccess db;
-
+        private readonly IFriendHandler friendHandler;
         internal static QueryCache<string, dynamic> Cache;
 
         public string ConnectionStringName = "DingoUsersConnection";
@@ -32,10 +32,13 @@ namespace DingoDataAccess.Account
 
         const string SearchForFriendProcedure = "SearchForFriend";
 
-        public DisplayNameHandler(ILogger<DisplayNameHandler<TFullDisplayNameType>> _Logger, ISqlDataAccess _db, ILogger<QueryCache<string, dynamic>> cacheLogger)
+        const string UniqueIdentifierAvailableProcedure = "UniqueIdentifierAvailable";
+
+        public DisplayNameHandler(ILogger<DisplayNameHandler<TFullDisplayNameType>> _Logger, ISqlDataAccess _db, ILogger<QueryCache<string, dynamic>> cacheLogger, IFriendHandler friendHandler)
         {
             logger = _Logger;
             db = _db;
+            this.friendHandler = friendHandler;
             db.ConnectionStringName = ConnectionStringName;
             Cache = new(cacheLogger);
         }
@@ -88,14 +91,21 @@ namespace DingoDataAccess.Account
 
             // clean any possible sql
             Helpers.CleanInputBasic(ref newDisplayName);
-            Helpers.CleanInputBasic(ref Id);
 
-            logger.LogInformation("Setting username for {UserId} to {Username}", Id, newDisplayName);
+            if (string.IsNullOrEmpty(newDisplayName))
+            {
+                return false;
+            }
+
+            if (string.IsNullOrWhiteSpace(newDisplayName))
+            {
+                return false;
+            }
 
             // get the old display name to check to see if we need to update or set the name
-            string oldDisplayName = await GetDisplayName(Id);
+            IFriendModel myFriendInfo = await friendHandler.GetFriend(Id);
 
-            bool alreadyAdded = oldDisplayName != null;
+            bool alreadyAdded = myFriendInfo != default;
 
             string storedProcedure;
 
@@ -103,7 +113,7 @@ namespace DingoDataAccess.Account
 
             if (alreadyAdded)
             {
-                logger.LogInformation("Changing displayname from {OldDisplayName} to {NewDisplayName} for {Id}", oldDisplayName, newDisplayName, Id);
+                logger.LogInformation("Changing displayname from {OldDisplayName} to {NewDisplayName} for {Id}", myFriendInfo.DisplayName, newDisplayName, Id);
                 storedProcedure = ChangeDisplayNameProcedure;
             }
             else
@@ -112,13 +122,37 @@ namespace DingoDataAccess.Account
                 storedProcedure = SetDisplayNameProcedure;
             }
 
-            // change or set the name
-            await db.ExecuteProcedure<dynamic, dynamic>(storedProcedure, parameters);
+            try
+            {
+                // check to make sure the unique id for this person isn't taken for the next username they are switching to
+                if (await UniqueIdentifierAvailable(newDisplayName, myFriendInfo.UniqueIdentifier) is false)
+                {
+                    // since the indentifier was taken get another one and then set it
+                    short? newUniqueId = await GetAvailableUniqueIdentifier(newDisplayName);
 
-            // update the name in cache
-            await Cache.UpdateOrCache(GetDisplayNameProcedure, new { Id }, newDisplayName);
+                    if (newUniqueId is null)
+                    {
+                        logger.LogError("Failed to change for {Id} Name: {NewDisplayName} null unique Id retrieved", Id, newDisplayName);
+                        return false;
+                    }
 
-            return true;
+                    await SetUniqueIdentifier(myFriendInfo.Id, (short)newUniqueId);
+                }
+
+                // change or set the name
+                await db.ExecuteProcedure<dynamic, dynamic>(storedProcedure, parameters);
+
+                // update the name in cache
+                await Cache.UpdateOrCache(GetDisplayNameProcedure, new { Id }, newDisplayName);
+
+                return true;
+            }
+            catch (Exception e)
+            {
+                logger.LogError("Failed to change for {Id} Name: {NewDisplayName} null unique Id retrieved Error: {Error}", Id, newDisplayName, e);
+
+                return false;
+            }
         }
 
         public async Task<short?> GetAvailableUniqueIdentifier(string DisplayName)
@@ -138,7 +172,7 @@ namespace DingoDataAccess.Account
                 return null;
             }
 
-            return (short)await RandomNumberGenerator.NextUnique(identifiers, 1000, 10000);
+            return await RandomNumberGenerator.NextUnique(identifiers, 1000, 10000);
         }
 
         public async Task<bool> SetUniqueIdentifier(string Id, short UniqueIdentifier)
@@ -186,6 +220,32 @@ namespace DingoDataAccess.Account
             }
 
             return null;
+        }
+
+        /// <summary>
+        /// Determines if the identifier for the given name has been taken
+        /// </summary>
+        /// <param name="DisplayName"></param>
+        /// <param name="UniqueIdentitfier"></param>
+        /// <returns></returns>
+        private async Task<bool> UniqueIdentifierAvailable(string DisplayName, short UniqueIdentifier)
+        {
+            try
+            {
+                List<string> found = await db.ExecuteProcedure<string, dynamic>(UniqueIdentifierAvailableProcedure, new { DisplayName, UniqueIdentifier });
+
+                if (found?.Count is null or 0)
+                {
+                    return true;
+                }
+
+                return false;
+            }
+            catch (Exception e)
+            {
+                logger.LogError("Failed to check if identifier take Error:{Error}", e);
+                return false;
+            }
         }
     }
 }
