@@ -3,28 +3,13 @@
 @inject ILogger<Toasts> logger
 
 <div class="toast-container position-absolute top-0 end-0 p-3" style="z-index: 1060;">
-    @foreach (var item in toasts)
+    @foreach (var item in TopLevel.toasts)
     {
-        <Toast @key="item" toast=@item StateHasChangedCallback=@StateHasChangedCallback />
+        <Toast @key="item" toast=@item />
     }
 </div>
 
 @code {
-    [Parameter]
-    public List<ToastModel> toasts { get; set; }
-
-    [CascadingParameter]
-    protected Action TopLevelStateChanged { get; set; }
-
-    private void StateHasChangedCallback()
-    {
-        for (int i = 0; i < toasts.Count; i++)
-        {
-            if (toasts[i].Remove)
-            {
-                toasts.Remove(toasts[i]);
-            }
-        }
-        TopLevelStateChanged?.Invoke();
-    }
+    [CascadingParameter(Name = "TopLevel")]
+    TopLevelObjects TopLevel { get; set; }
 }

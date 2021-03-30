@@ -57,13 +57,13 @@
 }
 @code {
     [CascadingParameter]
-    protected List<ToastModel> toasts { get; set; }
-
-    [CascadingParameter]
     protected Action toastCallback { get; set; }
 
     [CascadingParameter(Name = "messageCallbackReference")]
     MessageCallbackReference messageCallbackReference { get; set; }
+
+    [CascadingParameter(Name = "TopLevel")]
+    protected TopLevelObjects TopLevel { get; set; }
 
     [Parameter]
     public string Id { get; set; }
@@ -102,7 +102,7 @@
     {
         await base.OnInitializedAsync();
 
-        logger.LogInformation("Initialized Component {ComponentName} Params: {Param1}:{Param1Value} {Param2}:{Param2Value} {Param3}:{Param3Value} {Param4}:{Param4Value}", nameof(FriendEntry), nameof(Id), Id, nameof(Friend), Friend, nameof(toasts), toasts, nameof(toastCallback), toastCallback);
+        logger.LogInformation("Initialized Component {ComponentName} Params: {Param1}:{Param1Value} {Param2}:{Param2Value} {Param3}:{Param3Value}", nameof(FriendEntry), nameof(Id), Id, nameof(Friend), Friend, nameof(toastCallback), toastCallback);
     }
 
     private async Task MessageFriend()
@@ -178,16 +178,18 @@
             return;
         }
         blockInput = true;
-        logger.LogInformation("Report");
+
         await Wait();
-        toasts.Add(new()
+
+        TopLevel.toasts.Add(new()
         {
             Title = "Report Submitted",
             Content = "Your report has successfully been submitted! Thank you for keeping our community safe!",
             TimeSent = DateTime.UtcNow
         });
-        toastCallback?.Invoke();
-        logger.LogInformation("Toasts: {ToastCount}", toasts.Count);
+
+        TopLevel.StateHasChanged?.Invoke();
+
         blockInput = false;
     }
 

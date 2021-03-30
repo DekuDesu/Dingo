@@ -1,0 +1,144 @@
+﻿@inject ILogger<ChangeAvatar> logger
+
+@inject IAvatarHandler avatarHandler
+
+@using SixLabors.ImageSharp
+@using SixLabors.ImageSharp.Processing
+@using SixLabors.ImageSharp.Formats
+@using System.IO
+
+@using System.Text
+
+@using DingoDataAccess.Models.Friends
+
+<div class=@ModelClass tabindex="-1" aria-hidden="true" style=@ModalStyle>
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">@Title</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" @onclick=@Cancel></button>
+            </div>
+            <div class="modal-body" style="text-align: center;">
+                <img src=@AvatarPath class="w-50 h-50 rounded-circle my-3 ratio ratio-1x1" style="max-height: 256px; max-width: 256px;" />
+                <Dingo.Pages.Components.UploadFile OnUploadedCallback=@OnFileChange MaxFileSize=@MaxFileSize AllowableFileExtensions=@AllowableExt />
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" @onclick=@Cancel>@CancelText</button>
+                <button type="button" class="btn btn-primary" @onclick=@Submit>@SubmitText</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+
+    [CascadingParameter(Name = "Id")]
+    public string Id { get; set; }
+
+    [CascadingParameter(Name = "MyFriendInfo")]
+    public IFriendModel MyFriendInfo { get; set; }
+
+    [CascadingParameter(Name = "TopLevel")]
+    public TopLevelObjects TopLevel { get; set; }
+
+    public string Title { get; set; } = "Change Avatar";
+
+    public string CancelText { get; set; } = "Cancel";
+
+    public string SubmitText { get; set; } = "Save";
+
+    private string ModelClass => TopLevel.ShowChangeAvatar ? "modal fade show" : "modal fade";
+    private string ModalStyle => TopLevel.ShowChangeAvatar ? "display: unset;" : "display: none;";
+
+    private const int MaxFileSize_Megabytes = 5;
+
+    private int MaxFileSize = 1024 * 1024 * MaxFileSize_Megabytes;
+
+    private string[] AllowableExt = { ".bmp", ".png", ".jpg", ".jpeg", ".gif", ".TGA" };
+
+    private bool blockInput = false;
+
+    private Encoding Encoder = UnicodeEncoding.UTF8;
+
+    private string AvatarPath => newAvatarPath ?? MyFriendInfo?.AvatarPath ?? "/Images/DefaultAvatar.webp";
+
+    private string newAvatarPath = null;
+
+    private void Cancel()
+    {
+        if (blockInput)
+        {
+            return;
+        }
+
+        blockInput = true;
+
+        TopLevel.ShowChangeAvatar = false;
+
+        // reset the image path so we dont show the last one
+        newAvatarPath = null;
+
+        blockInput = false;
+    }
+
+    private async Task OnFileChange(IEnumerable<(string Path, string Base64Data)> files)
+    {
+        await Dingo.Helpers.Sleep(1);
+        try
+        {
+            foreach (var item in files)
+            {
+                logger.LogInformation("Attepting to decoding and load image {ItemName}", item.Path);
+
+                using MemoryStream s = new(Convert.FromBase64String(item.Base64Data));
+
+                Image img = await Image.LoadAsync(s);
+
+                img.Mutate(x => x.Resize(256, 0));
+
+                // determin it's extension, since we want users to be able to have gifs as profile pics we can't just encode everything into pngs like we want =(
+
+                if (item.Path.ToLower().Contains(".gif"))
+                {
+                    // convert it to base64 for storage
+                    newAvatarPath = img.ToBase64String(SixLabors.ImageSharp.Formats.Gif.GifFormat.Instance);
+                }
+                else
+                {
+                    // convert it to base64 for storage
+                    newAvatarPath = img.ToBase64String(SixLabors.ImageSharp.Formats.Png.PngFormat.Instance);
+                }
+
+                MyFriendInfo.AvatarPath = newAvatarPath;
+
+                // update UI
+                await InvokeAsync(() => StateHasChanged());
+            }
+        }
+        catch (Exception e)
+        {
+            logger.LogInformation("Error in encoding image Error{Error}", e);
+        }
+    }
+
+    private async Task Submit()
+    {
+        if (blockInput)
+        {
+            return;
+        }
+
+        blockInput = true;
+
+        await avatarHandler.SetAvatar(Id, newAvatarPath);
+
+        TopLevel.ShowChangeAvatar = false;
+
+        TopLevel.StateHasChanged();
+
+        // reset the image path so we dont show the last one
+        newAvatarPath = null;
+
+        blockInput = false;
+    }
+}

@@ -1,16 +1,13 @@
-﻿@using DingoDataAccess.Models.Friends
+﻿@inject ILogger<Avatar> logger
+
+@using DingoDataAccess.Models.Friends
+@using Dingo.Data.GeneralModels
 
 <div class="position-relative">
-    <div class="col-4 rounded-circle w-50 h-50 mx-auto d-block" @onmouseover=Hover_DimAvatar @onmouseout=Hover_UnDimAvatar>
-        <img class="col-4 rounded-circle w-100 h-100 mx-auto d-block" style=@AvatarStyle src=@(MyFriendInfo?.AvatarPath ?? "/Images/DefaultAvatar.png") />
+    <div class="ratio ratio-1x1 w-50 start-50 end-50 translate-middle-x" @onmouseover=Hover_DimAvatar @onmouseout=Hover_UnDimAvatar>
+        <img class="rounded-circle d-block mx-auto" style=@AvatarStyle src=@(MyFriendInfo?.AvatarPath ?? "/Images/DefaultAvatar.webp") />
         <button class="position-absolute top-50 start-50 translate-middle btn btn-link" style=@EditButtonStyle @onclick=Change_Avatar>
             <span class="oi oi-pencil py-1 d-none d-md-inline" style="color: white;"></span>
-            <div style="color: white; font-weight: bold;">
-                Change
-            </div>
-        </button>
-        <button class="position-absolute top-0 start-50 translate-middle btn btn-outline-light d-md-none" @onclick=Change_Avatar>
-            <span class="oi oi-pencil py-1" style="color: white;"></span>
             <div style="color: white; font-weight: bold;">
                 Change
             </div>
@@ -20,10 +17,13 @@
 
 @code {
     [CascadingParameter(Name = "Id")]
-    public string Id { get; set; }
+    protected string Id { get; set; }
 
     [CascadingParameter(Name = "MyFriendInfo")]
-    public IFriendModel MyFriendInfo { get; set; }
+    protected IFriendModel MyFriendInfo { get; set; }
+
+    [CascadingParameter(Name = "TopLevel")]
+    protected TopLevelObjects TopLevel { get; set; }
 
     private bool DimAvatar = false;
 
@@ -43,6 +43,12 @@
 
     private async Task Change_Avatar()
     {
+
+
         await Dingo.Helpers.Sleep(100);
+
+        TopLevel.ShowChangeAvatar = true;
+
+        TopLevel.StateHasChanged.Invoke();
     }
 }

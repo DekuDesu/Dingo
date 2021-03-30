@@ -6,31 +6,28 @@
 
 @using DingoDataAccess.Models.Friends
 
-<div class="sidebar">
+<CascadingValue Value=@TopLevel Name="TopLevel">
     <CascadingValue Value=@Id Name="Id">
         <CascadingValue Value=@DisplayName Name="DisplayName">
             <CascadingValue Value=@MyFriendInfo Name="MyFriendInfo">
                 <CascadingValue Value=@messageCallbackReference Name="messageCallbackReference">
-                    <NavMenu />
+                    <div class="sidebar">
+                        <NavMenu />
+                    </div>
+                    <div class="main">
+                        <div class="content px-4">
+                            @Body
+                        </div>
+                    </div>
+                    <Dingo.Pages.Components.Toasts />
+                    <Dingo.Pages.Components.Modals />
+                    <Dingo.Pages.Account.ChangeAvatar />
+                    <Dingo.Pages.Account.ChangeUsername />
                 </CascadingValue>
             </CascadingValue>
         </CascadingValue>
     </CascadingValue>
-</div>
-
-<div class="main">
-    <div class="content px-4">
-        <CascadingValue Value=@Id Name="Id">
-            <CascadingValue Value=@DisplayName Name="DisplayName">
-                <CascadingValue Value=@MyFriendInfo Name="MyFriendInfo">
-                    <CascadingValue Value=@messageCallbackReference Name="messageCallbackReference">
-                        @Body
-                    </CascadingValue>
-                </CascadingValue>
-            </CascadingValue>
-        </CascadingValue>
-    </div>
-</div>
+</CascadingValue>
 
 @code{
     [Parameter]
@@ -48,6 +45,11 @@
     [CascadingParameter]
     protected Task<AuthenticationState> AuthStat { get; set; }
 
+    /// <summary>
+    /// This is just an object that can be passed around to access objects that are invoked are rendered at the top level
+    /// </summary>
+    public TopLevelObjects TopLevel = new();
+
     protected override async Task OnInitializedAsync()
     {
         // only get the id and name if its not passed a param as a component
@@ -59,6 +61,8 @@
 
             await SetOnlineStatus();
         }
+
+        TopLevel.StateHasChanged = TopLevelStateChange;
 
         await base.OnInitializedAsync();
     }
@@ -99,5 +103,10 @@
         DisplayName = Id is null ? "" : await nameHandler.GetDisplayName(Id) ?? "";
 
         MyFriendInfo = await friendHandler.GetFriend(Id);
+    }
+
+    private void TopLevelStateChange()
+    {
+        StateHasChanged();
     }
 }

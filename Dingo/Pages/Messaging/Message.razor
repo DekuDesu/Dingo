@@ -15,99 +15,109 @@
 @inject IKeyAndBundleHandler<KeyBundleModel<SignedKeyModel>, SignedKeyModel> bundleHandler
 
 @implements IDisposable
-    <style type="text/css">
-        html, body {
-            background-image: linear-gradient(135deg, rgb(255, 255, 255), rgb(240, 240, 240));
-        }
-    </style>
-    <h1 class="flex">
-        Message @(Friend?.DisplayName ?? "Loading...")<span style="color:grey;">#@(Friend?.UniqueIdentifier ?? 0000)</span>
-    </h1>
-    <!--style="height: 75vh; margin-bottom: 55px;"-->
-    <div @ref=ChatBox class="d-flex flex-column-reverse list-group-flush overflow-auto d-none d-md-flex" style="height: 85vh;" id="exmaple">
-        @foreach (var item in Messages)
-        {
-            <div class="list-group-item list-group-item-action shadow-sm my-2">
-                <div class="d-flex">
-                    <img src=@(Friend.AvatarPath ?? "/Images/DefaultAvatar.png") class="rounded-circle flex my-auto" height="40" />
-                    <div class="mx-1 flex-fill">
-                        <div>
-                            <span class="fw-bold">@item.DisplayName</span><span style="color: grey;">#@item.UniqueIdentifier</span>
-                        </div>
-                        <div>
-                            <span style="color: darkgray;">@item.TimeSent</span>
-                            @if (item.ShowSpinner)
-                            {
-                                <div class="spinner-border spinner-border-sm text-success mx-1" role="status">
-                                    <span class="visually-hidden">Loading...</span>
-                                </div>
-                            }
-                            @if (item.ShowCheck)
-                            {
-                                <span class="oi oi-circle-check mx-1" title="Encrypted and Delivered" aria-hidden="true"></span>
-                            }
-                        </div>
+<style type="text/css">
+    html, body {
+        background-image: linear-gradient(135deg, rgb(255, 255, 255), rgb(240, 240, 240));
+    }
+</style>
+<h1 class="flex">
+    Message @(Friend?.DisplayName ?? "Loading...")<span style="color:grey;">#@(Friend?.UniqueIdentifier ?? 0000)</span>
+</h1>
+<!--style="height: 75vh; margin-bottom: 55px;"-->
+<div @ref=ChatBox class="d-flex flex-column-reverse list-group-flush overflow-auto d-none d-md-flex" style="height: 85vh;" id="exmaple">
+    @foreach (var item in Messages)
+    {
+        <div class="list-group-item list-group-item-action shadow-sm my-2">
+            <div class="d-flex">
+                <img src=@(item.AvatarIsFriends ? Friend.AvatarPath ?? "/Images/DefaultAvatar.webp" : (MyFriendInfo.AvatarPath ?? "/Images/DefaultAvatar.webp")) class="rounded-circle flex my-auto" height="40" width="40" />
+                <div class="mx-1 flex-fill">
+                    <div>
+                        <span class="fw-bold">@item.DisplayName</span><span style="color: grey;">#@item.UniqueIdentifier</span>
+                    </div>
+                    <div>
+                        <span style="color: darkgray;">@item.TimeSent</span>
+                        @if (item.ShowSpinner)
+                        {
+                            <div class="spinner-border spinner-border-sm text-success mx-1" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        }
+                        @if (item.ShowCheck)
+                        {
+                            <span class="oi oi-circle-check mx-1" title="Encrypted and Delivered" aria-hidden="true"></span>
+                        }
                     </div>
                 </div>
-                <div class="text-wrap">
-                    @item.Message
-                </div>
             </div>
-        }
-    </div>
-    <div @ref=ChatBox class="d-flex flex-column-reverse list-group-flush overflow-auto d-md-none" style="height: 68vh; margin-bottom: 55px;" id="exmaple">
-        @foreach (var item in Messages)
-        {
-            <div class="list-group-item list-group-item-action shadow-sm my-2">
-                <div class="d-flex">
-                    <img src=@(Friend.AvatarPath ?? "/Images/DefaultAvatar.png") class="rounded-circle flex my-auto" height="40" />
-                    <div class="mx-1 flex-fill">
-                        <div>
-                            <span class="fw-bold">@item.DisplayName</span><span style="color: grey;">#@item.UniqueIdentifier</span>
-                        </div>
-                        <div>
-                            <span style="color: darkgray;">@item.TimeSent</span>
-                            @if (item.ShowSpinner)
-                            {
-                                <div class="spinner-border spinner-border-sm text-success mx-1" role="status">
-                                    <span class="visually-hidden">Loading...</span>
-                                </div>
-                            }
-                            @if (item.ShowCheck)
-                            {
-                                <span class="oi oi-circle-check mx-1" title="Encrypted and Delivered" aria-hidden="true"></span>
-                            }
-                        </div>
-                    </div>
-                </div>
-                <div class="text-wrap">
-                    @item.Message
-                </div>
-            </div>
-        }
-    </div>
-    <div class="flex">
-        <EditForm Model="@InputValue" OnValidSubmit=@Submit>
-            <div class="input-group mb-3 d-none d-md-inline-flex">
-                <InputText class="form-control" placeholder=@PlaceholderText aria-label="Message" @bind-Value=@InputValue.Value>
+            <ul class="list-group list-group-flush">
+                @if (item.Message.Contains("<br>"))
+                {
+                    @foreach (var messageFragment in item.Message.Split("<br>"))
+                    {
+                        <li class="list-group-item text-wrap">
+                            @messageFragment
+                        </li>
+                    }
+                }
+                else
+                {
+                    <li class="list-group-item text-wrap">
+                        @item.Message
+                    </li>
+                }
+            </ul>
 
-                </InputText>
-                <!--
-                <button class="btn btn-outline-secondary px-1" type="submit">
-                    <span class="oi oi-folder mx-1" title="Attach File" aria-hidden="true"></span>
-                </button>
-                <button class="btn btn-outline-secondary px-1" type="submit">
-                    <span class="oi oi-image mx-1" title="Attach Image" aria-hidden="true"></span>
-                </button>
-                    -->
-                <button class="btn btn-primary px-4" type="submit">
-                    <span class="oi oi-chat mx-1" title="Send Message" aria-hidden="true"></span>
-                </button>
+        </div>
+    }
+</div>
+<div @ref=ChatBox class="d-flex flex-column-reverse list-group-flush overflow-auto d-md-none" style="height: 68vh; margin-bottom: 55px;" id="exmaple">
+    @foreach (var item in Messages)
+    {
+        <div class="list-group-item list-group-item-action shadow-sm my-2">
+            <div class="d-flex">
+                <img src=@(item.AvatarIsFriends ? Friend.AvatarPath ?? "/Images/DefaultAvatar.webp" : (MyFriendInfo.AvatarPath ?? "/Images/DefaultAvatar.webp")) class="rounded-circle flex my-auto" height="40" width="40" />
+                <div class="mx-1 flex-fill">
+                    <div>
+                        <span class="fw-bold">@item.DisplayName</span><span style="color: grey;">#@item.UniqueIdentifier</span>
+                    </div>
+                    <div>
+                        <span style="color: darkgray;">@item.TimeSent</span>
+                        @if (item.ShowSpinner)
+                        {
+                            <div class="spinner-border spinner-border-sm text-success mx-1" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        }
+                        @if (item.ShowCheck)
+                        {
+                            <span class="oi oi-circle-check mx-1" title="Encrypted and Delivered" aria-hidden="true"></span>
+                        }
+                    </div>
+                </div>
             </div>
-        </EditForm>
-    </div>
+            <ul class="list-group list-group-flush">
+                @if (item.Message.Contains("<br>"))
+                {
+                    @foreach (var messageFragment in item.Message.Split("<br>"))
+                    {
+                        <li class="list-group-item text-wrap">
+                            @messageFragment
+                        </li>
+                    }
+                }
+                else
+                {
+                    <li class="list-group-item text-wrap">
+                        @item.Message
+                    </li>
+                }
+            </ul>
+        </div>
+    }
+</div>
+<div class="flex">
     <EditForm Model="@InputValue" OnValidSubmit=@Submit>
-        <div class="input-group mb-3 d-md-none fixed-bottom" style="margin-left: 20px; margin-right: 20px; width: 90%;">
+        <div class="input-group mb-3 d-none d-md-inline-flex">
             <InputText class="form-control" placeholder=@PlaceholderText aria-label="Message" @bind-Value=@InputValue.Value>
 
             </InputText>
@@ -124,96 +134,122 @@
             </button>
         </div>
     </EditForm>
+</div>
+<EditForm Model="@InputValue" OnValidSubmit=@Submit>
+    <div class="input-group mb-3 d-md-none fixed-bottom" style="margin-left: 20px; margin-right: 20px; width: 90%;">
+        <InputText class="form-control" placeholder=@PlaceholderText aria-label="Message" @bind-Value=@InputValue.Value>
 
-    @code {
+        </InputText>
+        <!--
+        <button class="btn btn-outline-secondary px-1" type="submit">
+            <span class="oi oi-folder mx-1" title="Attach File" aria-hidden="true"></span>
+        </button>
+        <button class="btn btn-outline-secondary px-1" type="submit">
+            <span class="oi oi-image mx-1" title="Attach Image" aria-hidden="true"></span>
+        </button>
+            -->
+        <button class="btn btn-primary px-4" type="submit">
+            <span class="oi oi-chat mx-1" title="Send Message" aria-hidden="true"></span>
+        </button>
+    </div>
+</EditForm>
 
-        [CascadingParameter(Name = "MyFriendInfo")]
-        protected IFriendModel MyFriendInfo { get; set; }
+@code {
 
-        [CascadingParameter(Name = "Id")]
-        protected string Id { get; set; }
+    [CascadingParameter(Name = "MyFriendInfo")]
+    protected IFriendModel MyFriendInfo { get; set; }
 
-        [Parameter]
-        public string FriendId { get; set; }
+    [CascadingParameter(Name = "Id")]
+    protected string Id { get; set; }
 
-        public IFriendModel Friend { get; set; }
+    [Parameter]
+    public string FriendId { get; set; }
 
-        List<IMessageModel> RawMessages = new();
-        private List<MessageState> Messages = new();
+    public IFriendModel Friend { get; set; }
 
-        private ElementReference ChatBox;
+    List<IMessageModel> RawMessages = new();
+    private List<MessageState> Messages = new();
 
-        private string PlaceholderText => $"Message @ {Friend?.DisplayName ?? "Loading..."}#{Friend?.UniqueIdentifier ?? 0}";
+    private ElementReference ChatBox;
 
-        private FormModel InputValue = new();
+    private string PlaceholderText => $"Message @ {Friend?.DisplayName ?? "Loading..."}#{Friend?.UniqueIdentifier ?? 0}";
 
-        private bool BlockInput = false;
+    private FormModel InputValue = new();
 
-        private int RefreshPollingRate = 5_000;
+    private bool BlockInput = false;
 
-        private System.Timers.Timer RefreshTimer = new();
+    private int RefreshPollingRate = 5_000;
 
-        // ENCRYPTION METHODS
+    private System.Timers.Timer RefreshTimer = new();
 
-        private async Task LoadEncryptionClient()
+    // ENCRYPTION METHODS
+
+    private async Task LoadEncryptionClient()
+    {
+        // since we are chatting with this person we should already have a state stored to encrypt between us
+
+        // get the encryption state for the person we are chatting with
+        var state = await clientStateHandler.GetState(Id, FriendId);
+
+        if (state != null)
         {
-            // since we are chatting with this person we should already have a state stored to encrypt between us
-
-            // get the encryption state for the person we are chatting with
-            var state = await clientStateHandler.GetState(Id, FriendId);
-
-            if (state != null)
-            {
-                encryptionClient.ImportState(state);
-            }
-            else
-            {
-                logger.LogError("Failed to get encryption state for {Id} for {FriendId}", Id, FriendId);
-            }
+            encryptionClient.ImportState(state);
         }
-
-        private async Task SaveEncryptionState()
+        else
         {
-            // export the local state to string
-            string state = encryptionClient.ExportState();
-
-            // ssave the string in the database
-            await clientStateHandler.SetState(Id, FriendId, state);
+            logger.LogError("Failed to get encryption state for {Id} for {FriendId}", Id, FriendId);
         }
+    }
 
-        private async Task SendMessage(string message)
+    private async Task SaveEncryptionState()
+    {
+        // export the local state to string
+        string state = encryptionClient.ExportState();
+
+        // ssave the string in the database
+        await clientStateHandler.SetState(Id, FriendId, state);
+    }
+
+    private async Task SendMessage(string message)
+    {
+        // encrypt the message
+        if (encryptionClient.TryEncrypt(message, out EncryptedDataModel encryptedData))
         {
-            // encrypt the message
-            if (encryptionClient.TryEncrypt(message, out EncryptedDataModel encryptedData))
+            // serialize the message
+            string serializedEncryptedData = Newtonsoft.Json.JsonConvert.SerializeObject(encryptedData);
+
+            // send message over the wire
+
+            MessageModel rawMessage = new()
             {
-                // serialize the message
-                string serializedEncryptedData = Newtonsoft.Json.JsonConvert.SerializeObject(encryptedData);
+                SenderId = Id,
+                Message = serializedEncryptedData,
+                TimeSent = DateTime.UtcNow
+            };
 
-                // send message over the wire
+            await messageHandler.SendMessage(Id, FriendId, rawMessage);
 
-                MessageModel rawMessage = new()
+            await SaveEncryptionState();
+        }
+        else
+        {
+            logger.LogError("Failed to encrypt message for {Id} to {FriendId}", Id, FriendId);
+        }
+    }
+
+    private async Task ReceiveMessage(IMessageModel rawMessage)
+    {
+        try
+        {
+            EncryptedDataModel deserializedEncryptedMessage = Newtonsoft.Json.JsonConvert.DeserializeObject<EncryptedDataModel>(rawMessage.Message);
+            if (encryptionClient.TryDecrypt(deserializedEncryptedMessage, out string decryptedString))
+            {
+                // check to see if the last message was from the other person, if it is combin this message with that one to avoid screen spamming
+                if (Messages.Count >= 1 && Messages[0].DisplayName == Friend.DisplayName)
                 {
-                    SenderId = Id,
-                    Message = serializedEncryptedData,
-                    TimeSent = DateTime.UtcNow
-                };
-
-                await messageHandler.SendMessage(Id, FriendId, rawMessage);
-
-                await SaveEncryptionState();
-            }
-            else
-            {
-                logger.LogError("Failed to encrypt message for {Id} to {FriendId}", Id, FriendId);
-            }
-        }
-
-        private async Task ReceiveMessage(IMessageModel rawMessage)
-        {
-            try
-            {
-                EncryptedDataModel deserializedEncryptedMessage = Newtonsoft.Json.JsonConvert.DeserializeObject<EncryptedDataModel>(rawMessage.Message);
-                if (encryptionClient.TryDecrypt(deserializedEncryptedMessage, out string decryptedString))
+                    Messages[0].Message += $"<br>{decryptedString}";
+                }
+                else
                 {
                     Messages.Insert(
                         0,
@@ -224,139 +260,153 @@
                             Message = decryptedString,
                             ShowCheck = false,
                             TimeSent = rawMessage.TimeSent,
-                            UniqueIdentifier = Friend.UniqueIdentifier
+                            UniqueIdentifier = Friend.UniqueIdentifier,
+                            AvatarIsFriends = true
                         }
                     );
-                    await SaveEncryptionState();
                 }
-            }
-            catch (Exception e)
-            {
-                logger.LogError("Failed to receive message from {SenderId} Error: {Error}", rawMessage.SenderId, e);
+                await SaveEncryptionState();
             }
         }
-
-        // END ENCRYPTION METHODS
-
-        private async Task ScrollToBottomOfChatbox()
+        catch (Exception e)
         {
-            await js.InvokeVoidAsync("scrollToBottom", ChatBox);
-        }
-
-        private async Task Submit()
-        {
-            if (BlockInput)
-            {
-                return;
-            }
-
-            BlockInput = true;
-
-            if (string.IsNullOrEmpty(InputValue.Value))
-            {
-                BlockInput = false;
-                return;
-            }
-
-            await Dingo.Helpers.Sleep(100);
-
-            // create a object to keep track of the object and update the spinners as necessary
-            var msgReference = new MessageState()
-            {
-                DisplayName = MyFriendInfo.DisplayName,
-                ShowSpinner = true,
-                Message = InputValue.Value,
-                ShowCheck = false,
-                TimeSent = DateTime.UtcNow,
-                UniqueIdentifier = MyFriendInfo.UniqueIdentifier
-            };
-
-            Messages.Insert(0, msgReference);
-
-            // show animation immediately even though we haven't sent the message yet
-            await ScrollToBottomOfChatbox();
-
-            await SendMessage(InputValue.Value);
-
-            // update the spinners
-            msgReference.ShowCheck = true;
-            msgReference.ShowSpinner = false;
-
-            logger.LogInformation("Message {Message}", InputValue.Value);
-
-            InputValue.Value = "";
-
-            BlockInput = false;
-        }
-
-        protected override async Task OnInitializedAsync()
-        {
-            await base.OnInitializedAsync();
-
-            logger.LogInformation("Initialized Component {ComponentName} Params: {Param1}:{Param1Value} {Param2}:{Param2Value}", nameof(Message), nameof(Id), Id, nameof(MyFriendInfo), MyFriendInfo);
-
-            // make sure we load the encryption state so we can communicate
-
-            await LoadEncryptionClient();
-
-            await LoadMessages();
-
-            RefreshTimer.Interval = RefreshPollingRate;
-            RefreshTimer.Elapsed += async (x, y) => await LoadMessages();
-            RefreshTimer.AutoReset = true;
-            RefreshTimer.Start();
-        }
-
-        private async Task LoadMessages()
-        {
-            // this retrieves the messages for the person we are messaging, this also permenantly deletes those messages from the database, once the messages leave memory they are gone forever
-            RawMessages = await messageHandler.GetMessages(Id, FriendId);
-
-            await RedrawMessages();
-
-            await ScrollToBottomOfChatbox();
-        }
-
-        private async Task RedrawMessages()
-        {
-            // make sure we have the friend model for this friend
-            Friend ??= await friendHandler.GetFriend(FriendId);
-
-            if (Friend is null)
-            {
-                return;
-            }
-
-            // draw the messages
-            foreach (var item in RawMessages)
-            {
-                await ReceiveMessage(item);
-            }
-
-            RawMessages.Clear();
-
-            await InvokeAsync(() => StateHasChanged());
-        }
-
-        private class FormModel
-        {
-            public string Value { get; set; }
-        }
-
-        private class MessageState
-        {
-            public string DisplayName { get; set; }
-            public short UniqueIdentifier { get; set; }
-            public string Message { get; set; }
-            public bool ShowSpinner { get; set; } = false;
-            public bool ShowCheck { get; set; } = false;
-            public DateTime TimeSent { get; set; }
-        }
-
-        public void Dispose()
-        {
-            RefreshTimer?.Stop();
-            RefreshTimer?.Close();
-            RefreshTimer?.Dispose();
+            logger.LogError("Failed to receive message from {SenderId} Error: {Error}", rawMessage.SenderId, e);
         }
     }
+
+    // END ENCRYPTION METHODS
+
+    private async Task ScrollToBottomOfChatbox()
+    {
+        await js.InvokeVoidAsync("scrollToBottom", ChatBox);
+    }
+
+    private async Task Submit()
+    {
+        if (BlockInput)
+        {
+            return;
+        }
+
+        BlockInput = true;
+
+        if (string.IsNullOrEmpty(InputValue.Value))
+        {
+            BlockInput = false;
+            return;
+        }
+
+        await Dingo.Helpers.Sleep(100);
+
+        // create a object to keep track of the object and update the spinners as necessary
+        var msgReference = new MessageState()
+        {
+            DisplayName = MyFriendInfo.DisplayName,
+            ShowSpinner = true,
+            Message = InputValue.Value,
+            ShowCheck = false,
+            TimeSent = DateTime.UtcNow,
+            UniqueIdentifier = MyFriendInfo.UniqueIdentifier,
+            AvatarIsFriends = false
+        };
+
+        // if the last message was sent by me then append this message to that instead of spamming the screen with my mesages
+        if (Messages.Count >= 1 && Messages[0].DisplayName == MyFriendInfo.DisplayName)
+        {
+            Messages[0].Message += $"<br>{msgReference.Message}";
+        }
+        else
+        {
+            Messages.Insert(0, msgReference);
+        }
+
+
+
+        // show animation immediately even though we haven't sent the message yet
+        await ScrollToBottomOfChatbox();
+
+        await SendMessage(InputValue.Value);
+
+        // update the spinners
+        msgReference.ShowCheck = true;
+        msgReference.ShowSpinner = false;
+
+        logger.LogInformation("Message {Message}", InputValue.Value);
+
+        InputValue.Value = "";
+
+        BlockInput = false;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+
+        logger.LogInformation("Initialized Component {ComponentName} Params: {Param1}:{Param1Value} {Param2}:{Param2Value}", nameof(Message), nameof(Id), Id, nameof(MyFriendInfo), MyFriendInfo);
+
+        // make sure we load the encryption state so we can communicate
+
+        await LoadEncryptionClient();
+
+        await LoadMessages();
+
+        RefreshTimer.Interval = RefreshPollingRate;
+        RefreshTimer.Elapsed += async (x, y) => await LoadMessages();
+        RefreshTimer.AutoReset = true;
+        RefreshTimer.Start();
+    }
+
+    private async Task LoadMessages()
+    {
+        // this retrieves the messages for the person we are messaging, this also permenantly deletes those messages from the database, once the messages leave memory they are gone forever
+        RawMessages = await messageHandler.GetMessages(Id, FriendId);
+
+        await RedrawMessages();
+
+        await ScrollToBottomOfChatbox();
+    }
+
+    private async Task RedrawMessages()
+    {
+        // make sure we have the friend model for this friend
+        Friend ??= await friendHandler.GetFriend(FriendId);
+
+        if (Friend is null)
+        {
+            return;
+        }
+
+        // draw the messages
+        foreach (var item in RawMessages)
+        {
+            await ReceiveMessage(item);
+        }
+
+        RawMessages.Clear();
+
+        await InvokeAsync(() => StateHasChanged());
+    }
+
+    private class FormModel
+    {
+        public string Value { get; set; }
+    }
+
+    private class MessageState
+    {
+        public string DisplayName { get; set; }
+        public short UniqueIdentifier { get; set; }
+        public string Message { get; set; }
+        public bool ShowSpinner { get; set; } = false;
+        public bool ShowCheck { get; set; } = false;
+        public DateTime TimeSent { get; set; }
+        public bool AvatarIsFriends { get; set; } = false;
+    }
+
+    public void Dispose()
+    {
+        RefreshTimer?.Stop();
+        RefreshTimer?.Close();
+        RefreshTimer?.Dispose();
+    }
+}

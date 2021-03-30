@@ -14,15 +14,10 @@
     [CascadingParameter(Name = "Id")]
     public string Id { get; set; }
 
+    [CascadingParameter(Name = "TopLevel")]
+    public TopLevelObjects TopLevel { get; set; }
+
     private string PreviousFriendId = "-1";
-
-    public List<ToastModel> toasts = new();
-
-    public void ToastStateChange()
-    {
-        logger.LogInformation("Top level toast state change invoked");
-        StateHasChanged();
-    }
 
     [CascadingParameter]
     protected Task<AuthenticationState> AuthStat { get; set; }
@@ -45,27 +40,22 @@
 }
 
 <AuthorizeView>
-    <CascadingValue Value=@toasts>
-        <CascadingValue Value=@ToastStateChange TValue=Action>
-            @if (string.IsNullOrEmpty(messageCallbackReference.FriendId) is false)
-            {
-                if (messageCallbackReference.FriendId != PreviousFriendId)
-                {
-                    PreviousFriendId = messageCallbackReference.FriendId;
-                    <Dingo.Pages.Messaging.Message FriendId=@messageCallbackReference.FriendId />
-                }
-                else
-                {
-                    <Dingo.Pages.Messaging.Message FriendId=@messageCallbackReference.FriendId />
-                }
-            }
-            else
-            {
-                <div class="col-lg-6 col-md-10 col-xs-12">
-                    <Dingo.Pages.Account.ManageFriends Id=@Id />
-                </div>
-            }
-            <Dingo.Pages.Components.Toasts toasts=@toasts />
-        </CascadingValue>
-    </CascadingValue>
+    @if (string.IsNullOrEmpty(messageCallbackReference.FriendId) is false)
+    {
+        if (messageCallbackReference.FriendId != PreviousFriendId)
+        {
+            PreviousFriendId = messageCallbackReference.FriendId;
+            <Dingo.Pages.Messaging.Message FriendId=@messageCallbackReference.FriendId />
+        }
+        else
+        {
+            <Dingo.Pages.Messaging.Message FriendId=@messageCallbackReference.FriendId />
+        }
+    }
+    else
+    {
+        <div class="col-lg-6 col-md-10 col-xs-12">
+            <Dingo.Pages.Account.ManageFriends Id=@Id />
+        </div>
+    }
 </AuthorizeView>

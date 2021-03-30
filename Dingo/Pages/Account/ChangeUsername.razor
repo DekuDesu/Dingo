@@ -3,52 +3,93 @@
 @inject ILogger<ChangeUsername> logger
 
 @inject NavigationManager NavManager
-
+@using DingoDataAccess.Models.Friends
 @inject IDisplayNameHandler nameHandler
+@inject IFriendHandler friendHandler
 
-@code{
-    [Parameter]
+<div class=@ModelClass tabindex="-1" aria-hidden="true" style=@ModalStyle>
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">@Title</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" @onclick=@Cancel></button>
+            </div>
+            <div class="modal-body" style="text-align: center;">
+                <EditForm Context="User" @bind-model="newUsername" OnValidSubmit="@UpdateUsername">
+                    <InputText class="form-control my-2" @bind-Value=@newUsername.Term />
+                </EditForm>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" @onclick=@Cancel>@CancelText</button>
+                <button type="button" class=@ButtonClass @onclick=@Submit>
+                    <span class="oi oi-check" role="status" aria-hidden="true" style=@CheckStyle></span>
+                    <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style=@SpinnerStyle></span>
+                    @ButtonText
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+
+    [CascadingParameter(Name = "Id")]
+    public string Id { get; set; }
+
+    [CascadingParameter(Name = "MyFriendInfo")]
+    public IFriendModel MyFriendInfo { get; set; }
+
+    [CascadingParameter(Name = "TopLevel")]
+    public TopLevelObjects TopLevel { get; set; }
+
+    [CascadingParameter(Name = "DisplayName")]
     public string DisplayName { get; set; } = null;
-
-    [Parameter]
-    public string Id { get; set; } = null;
-
-    // make sure we get the display name
-    [CascadingParameter]
-    protected Task<AuthenticationState> AuthStat { get; set; }
 
     private SingleSearchTermModel newUsername = new();
 
-    protected override async Task OnInitializedAsync()
+    public string Title { get; set; } = "Change Display Name";
+
+    public string CancelText { get; set; } = "Cancel";
+
+    public string SubmitText { get; set; } = "Save";
+
+    private string ModelClass => TopLevel.ShowChangeDisplayName ? "modal fade show" : "modal fade";
+    private string ModalStyle => TopLevel.ShowChangeDisplayName ? "display: unset;" : "display: none;";
+
+    private bool blockInput = false;
+
+    private void Cancel()
     {
-        await base.OnInitializedAsync();
+        if (blockInput)
+        {
+            return;
+        }
 
-        logger.LogInformation("Initialized Component {ComponentName} Params: {Param1}:{Param1Value} {Param2}:{Param2Value}", nameof(ChangeUsername), nameof(Id), Id, nameof(DisplayName), DisplayName);
+        blockInput = true;
 
-        // update the placeholder
-        newUsername.Term = DisplayName;
+        TopLevel.ShowChangeDisplayName = false;
+
+        blockInput = false;
     }
-}
 
-<EditForm Context="User" @bind-model="newUsername" OnValidSubmit="@UpdateUsername">
-    <div class="row">
-        <h2>Change Display Name</h2>
-    </div>
-    <div class="row">
-        <div class="row">
-            <InputText class="form-control my-2" @bind-Value=@newUsername.Term />
-        </div>
-        <div class="row col-6">
-            <button type="submit" class=@ButtonClass>
-                <span class="oi oi-check" role="status" aria-hidden="true" style=@CheckStyle></span>
-                <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style=@SpinnerStyle></span>
-                @ButtonText
-            </button>
-        </div>
-    </div>
-</EditForm>
 
-@code {
+    private async Task Submit()
+    {
+        if (blockInput)
+        {
+            return;
+        }
+
+        blockInput = true;
+
+        await UpdateUsername();
+
+        TopLevel.ShowChangeDisplayName = false;
+
+        TopLevel.StateHasChanged();
+
+        blockInput = false;
+    }
 
     private string SpinnerStyle = "display: none";
     private string ButtonText = "Change";
@@ -71,6 +112,11 @@
             return;
         }
 
+        if (string.IsNullOrWhiteSpace(newUsername.Term))
+        {
+            return;
+        }
+
         // make sure it's not the same name
         if (newUsername.Term == DisplayName)
         {
@@ -84,15 +130,41 @@
         logger.LogInformation("Changing username for {Id} to: {NewUsername}", Id, newUsername.Term);
 
         // set / update the name, this uses parameterized procedures and rewplaces ; and ' limiting sql injection opportunities
-        await nameHandler.SetDisplayName(Id, newUsername.Term);
+        if (await nameHandler.SetDisplayName(Id, newUsername.Term))
+        {
+            // get my friend info again
+            MyFriendInfo = await friendHandler.GetFriend(Id);
 
-        // update the field so we cant change the name multiple times to the same thing
-        DisplayName = newUsername.Term;
+            TopLevel.StateHasChanged();
 
-        // this is to make the user feel like the username has really been changed
-        await Task.Run(() => System.Threading.Thread.Sleep(500));
+            // update the field so we cant change the name multiple times to the same thing
+            DisplayName = newUsername.Term;
 
-        // update the GUI to reflect the completed process
-        UpdateButton("Changed", true, false);
+            // this is to make the user feel like the username has really been changed
+            await Task.Run(() => System.Threading.Thread.Sleep(500));
+
+            // update the GUI to reflect the completed process
+            UpdateButton("Changed", true, false);
+
+            // add a toast to notify user that display name has been changed!
+            TopLevel.toasts.Add(new ToastModel()
+            {
+                Timeout = TimeSpan.FromSeconds(5),
+                Content = $"Display name sucessfully changed to {DisplayName} ٩(^‿^)۶",
+                Title = "Success!"
+            });
+        }
+        else
+        {
+            // add a toast to notify user that something went wrong =(
+            TopLevel.toasts.Add(new ToastModel()
+            {
+                Timeout = TimeSpan.FromSeconds(5),
+                Content = $"Something went wrong changing your display name, try again later. ಥᴥಥ",
+                Title = "Ruh Roh!"
+            });
+        }
+
+        TopLevel.StateHasChanged();
     }
 }
