@@ -3,11 +3,9 @@
 @inject ILogger<NavMessages> logger
 @inject IFriendHandler friendHandler
 
-@implements IDisposable
-
 @using DingoDataAccess.Models.Friends
 
-@if (Messages.Count == 0)
+@if (TopLevel.Messages.Count == 0)
 {
     <li class="nav-item px-3">
         <div class="rounded-1 align-self-center py-2" style="text-align: center; background-color: darkslateblue;">
@@ -19,9 +17,9 @@
 }
 else
 {
-    @foreach (var item in Messages)
+    @foreach (var item in TopLevel.Messages)
     {
-        <NavMessage Friend=@item />
+        <NavMessage Friend=@item OnClick=@RemoveMessage />
     }
 }
 
@@ -29,65 +27,32 @@ else
     [CascadingParameter(Name = "Id")]
     protected string Id { get; set; }
 
+    [CascadingParameter(Name = nameof(TopLevel))]
+    public TopLevelObjects TopLevel { get; set; }
+
     private const string NoMessagesText = "ʕ•ᴥ•ʔ All Caught Up!";
 
-    List<IFriendModel> Messages = new();
-
-    private int MessagePollingRate = 15_000;
-
-    System.Timers.Timer CheckForMessagesTimer = new();
-
-    private async Task LoadMessages()
+    private async Task RemoveMessage(IFriendModel friend)
     {
-        await Dingo.Helpers.Sleep(100);
+        // this is invoked when a user clicks the notification in the nav bar
+        // the user is automatically shown the message screen and views the waiting messages
 
-        Messages.Clear();
+        // remove the friend from the messages list
+        TopLevel.Messages.Remove(friend);
 
-        List<IMessageModel> waitingMessages = await messageHandler.GetMessages(Id);
+        // remove them from the pushed notifications list
+        await TopLevel.AlreadyPushedMessageIds.Remove(friend.Id);
 
-        if (waitingMessages is null)
-        {
-            return;
-        }
-
-        Messages.Clear();
-
-        List<string> Ids = new();
-
-        foreach (var item in waitingMessages)
-        {
-            if (Ids.Contains(item.SenderId) is false)
-            {
-                Ids.Add(item.SenderId);
-            }
-        }
-
-        foreach (var item in Ids)
-        {
-            Messages.Add(await friendHandler.GetFriend(item));
-        }
-
-        await InvokeAsync(() => StateHasChanged());
+        // update the UI
+        await InvokeAsync(() => TopLevel.StateHasChanged());
     }
 
-    protected override async Task OnInitializedAsync()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        await base.OnInitializedAsync();
-
-        logger.LogInformation("Initialized Component {ComponentName} Params: {Param1}:{Param1Value}", nameof(NavMessages), nameof(Id), Id);
-
-        await LoadMessages();
-
-        CheckForMessagesTimer.Elapsed += async (x, y) => await LoadMessages();
-        CheckForMessagesTimer.Interval = MessagePollingRate;
-        CheckForMessagesTimer.AutoReset = true;
-        CheckForMessagesTimer.Start();
-    }
-
-    public void Dispose()
-    {
-        CheckForMessagesTimer?.Stop();
-        CheckForMessagesTimer?.Close();
-        CheckForMessagesTimer?.Dispose();
+        if (firstRender)
+        {
+            await TopLevel.GetMessages();
+        }
+        await base.OnAfterRenderAsync(firstRender);
     }
 }

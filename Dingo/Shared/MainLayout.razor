@@ -1,29 +1,30 @@
 ﻿@inherits LayoutComponentBase
 
+@inject ILogger<MainLayout> logger
+
 @inject IDisplayNameHandler nameHandler
 @inject IStatusHandler statusHandler
 @inject IFriendHandler friendHandler
+@inject IMessageHandler messageHandler
 
 @using DingoDataAccess.Models.Friends
 
-<CascadingValue Value=@TopLevel Name="TopLevel">
-    <CascadingValue Value=@Id Name="Id">
-        <CascadingValue Value=@DisplayName Name="DisplayName">
-            <CascadingValue Value=@MyFriendInfo Name="MyFriendInfo">
-                <CascadingValue Value=@messageCallbackReference Name="messageCallbackReference">
-                    <div class="sidebar">
-                        <NavMenu />
+<CascadingValue Value=@TopLevel Name=@nameof(TopLevel)>
+    <CascadingValue Value=@Id Name=@nameof(Id)>
+        <CascadingValue Value=@DisplayName Name=@nameof(DisplayName)>
+            <CascadingValue Value=@MyFriendInfo Name=@nameof(MyFriendInfo)>
+                <div class="sidebar">
+                    <NavMenu />
+                </div>
+                <div class="main">
+                    <div class="content px-4">
+                        @Body
                     </div>
-                    <div class="main">
-                        <div class="content px-4">
-                            @Body
-                        </div>
-                    </div>
-                    <Dingo.Pages.Components.Toasts />
-                    <Dingo.Pages.Components.Modals />
-                    <Dingo.Pages.Account.ChangeAvatar />
-                    <Dingo.Pages.Account.ChangeUsername />
-                </CascadingValue>
+                </div>
+                <Dingo.Pages.Components.Toasts />
+                <Dingo.Pages.Components.Modals />
+                <Dingo.Pages.Account.ChangeAvatar />
+                <Dingo.Pages.Account.ChangeUsername />
             </CascadingValue>
         </CascadingValue>
     </CascadingValue>
@@ -39,19 +40,17 @@
     [Parameter]
     public IFriendModel MyFriendInfo { get; set; }
 
+    public readonly TopLevelObjects TopLevel = new();
+
     [Parameter]
     public MessageCallbackReference messageCallbackReference { get; set; } = new();
 
     [CascadingParameter]
     protected Task<AuthenticationState> AuthStat { get; set; }
 
-    /// <summary>
-    /// This is just an object that can be passed around to access objects that are invoked are rendered at the top level
-    /// </summary>
-    public TopLevelObjects TopLevel = new();
-
     protected override async Task OnInitializedAsync()
     {
+        await base.OnInitializedAsync();
         // only get the id and name if its not passed a param as a component
         // this helps reduce the # of requests to the DB
         // check to see if we need to get the display and id to change the name
@@ -62,9 +61,18 @@
             await SetOnlineStatus();
         }
 
-        TopLevel.StateHasChanged = TopLevelStateChange;
+        TopLevel.StateHasChanged = () => InvokeAsync(() => TopLevelStateChange());
 
-        await base.OnInitializedAsync();
+        await SetupTimers();
+
+
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+
+
+        await base.OnParametersSetAsync();
     }
 
     private async Task SetOnlineStatus()
@@ -108,5 +116,147 @@
     private void TopLevelStateChange()
     {
         StateHasChanged();
+    }
+
+    /// <summary>
+    /// Sets up all the timers that should run periodically for this user
+    /// </summary>
+    /// <returns></returns>
+    private async Task SetupTimers()
+    {
+        // get any friends requests peridically
+        await TopLevel.AddTimer(15_000, GetFriendRequests, nameof(Dingo.Pages.Account.Requests.ViewRequests));
+
+        // make sure to set the override so when the user manually navigates to the request component they can force a refresh without having to wait
+        TopLevel.GetFriendRequests = GetFriendRequests;
+
+        // update the friends list from the server periodically
+
+        await TopLevel.AddTimer(15_000, async () => await GetFriends(), nameof(Dingo.Pages.Account.Friends.DisplayFriends));
+
+        // make sure other objects can force-check for friends
+        TopLevel.GetFriends = GetFriends;
+
+        await TopLevel.AddTimer(15_000, async () => await GetWaitingMessages(), nameof(Dingo.Pages.Messaging.NavMessages));
+
+        // make sure to allow components the ability to force refresh the waiting messages
+        TopLevel.GetMessages = GetWaitingMessages;
+    }
+
+    /// <summary>
+    /// retrieves waiting friend requests from server and sends a toast notification when they arrive
+    /// </summary>
+    /// <returns></returns>
+    private async Task GetFriendRequests()
+    {
+        var newRequests = await friendHandler.GetRequests(Id);
+
+        bool changed = false;
+
+        foreach (var item in newRequests)
+        {
+            // if we already sent a notification this session we shouldn't send another toast
+            if (TopLevel.AlreadyPushedRequestIds.Contains(item.Id) is false)
+            {
+                // since the id wasn't in the list that contains the already pushed toasts send a toast
+                TopLevel.toasts.Add(new Data.GeneralModels.ToastModel()
+                {
+                    Content = $"{item.DisplayName}#{item.UniqueIdentifier} sent you a friend request.",
+                    Title = $"Friend Request",
+                    Timeout = TimeSpan.FromSeconds(20)
+                });
+
+                // add the id to the list so we dont send more toasts about the same notification
+                TopLevel.AlreadyPushedRequestIds.Add(item.Id);
+
+                // mark the list as changed so we can push another render to the UI
+                changed = true;
+            }
+        }
+
+        if (changed)
+        {
+            // since the list changed add it
+            TopLevel.FriendRequests = newRequests;
+        }
+
+        // the UI is automatically updated when this function is called from the TopLevel
+    }
+
+    /// <summary>
+    /// Retrieves the friends that the current user has added to their friendlist from the server
+    /// </summary>
+    /// <returns></returns>
+    private async Task GetFriends()
+    {
+        TopLevel.Friends = await friendHandler.GetFriendList(Id);
+    }
+
+    /// <summary>
+    /// Retrieves unread messages from server and sends notifications when they are received and adds their buttons into the nav bar
+    /// </summary>
+    /// <returns></returns>
+    private async Task GetWaitingMessages()
+    {
+        // get the list of actual messages that have been sent to me
+        List<IMessageModel> waitingMessages = await messageHandler.GetMessages(Id);
+
+        // if there are none then do nothing
+        if (waitingMessages?.Count is null or 0)
+        {
+            // if there are no waiting messages then we can clear the lists that hold information that prevents us of pushing notifications
+
+            // allow us to send notifications
+            await TopLevel.AlreadyPushedMessageIds.Clear();
+
+            // allow us to remove notifications
+            TopLevel.Messages.Clear();
+
+            return;
+        }
+
+        async Task SendNotification(string Id, DateTime sent, int numberOfMessages)
+        {
+            // set the number of messages
+            await TopLevel.AlreadyPushedMessageIds.Add(Id, numberOfMessages);
+
+            // send the notificaiton to the user
+            var friend = await friendHandler.GetFriend(Id);
+
+            // add the friend the the message list so they're information is displayed in the nav bar
+            if (TopLevel.Messages.Contains(friend) is false)
+            {
+                TopLevel.Messages.Add(friend);
+            }
+
+            // send a toast the the user to notifiy them of the incoming message
+            TopLevel.toasts.Add(new Data.GeneralModels.ToastModel()
+            {
+                Content = $"{friend.DisplayName}#{friend.UniqueIdentifier} sent you a message.",
+                Title = $"New Message",
+                Timeout = TimeSpan.FromSeconds(10),
+                TimeSent = sent
+            });
+        }
+
+        foreach (var item in waitingMessages)
+        {
+            // get the number of times the person has messaged the user
+            int numberOfMessagesFromThisItem = waitingMessages.Where(x => x.SenderId == item.SenderId).Count();
+
+            // check to see if we have already sent a notification for this person, and if we have check to see how many messages the person has sent, if they have sent additional messages we should still notify the user
+            if (await TopLevel.AlreadyPushedMessageIds.Contains(item.SenderId))
+            {
+                if (numberOfMessagesFromThisItem > TopLevel.AlreadyPushedMessageIds[item.SenderId])
+                {
+                    await SendNotification(item.SenderId, item.TimeSent, numberOfMessagesFromThisItem);
+                }
+            }
+            else
+            {
+                // since we have no sent a notification yet send the user a notification and store the number of messages sent and the id so we dont send any more notifications unless the person sends another message
+                await SendNotification(item.SenderId, item.TimeSent, numberOfMessagesFromThisItem);
+            }
+        }
     }
 }

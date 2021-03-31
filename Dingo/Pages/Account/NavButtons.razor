@@ -17,7 +17,7 @@
 </div>
 
 @code {
-    [CascadingParameter(Name = "TopLevel")]
+    [CascadingParameter(Name = nameof(TopLevel))]
     public TopLevelObjects TopLevel { get; set; }
 
     private bool ShowDropDown = false;

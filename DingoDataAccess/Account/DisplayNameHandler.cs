@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -33,6 +34,8 @@ namespace DingoDataAccess.Account
         const string SearchForFriendProcedure = "SearchForFriend";
 
         const string UniqueIdentifierAvailableProcedure = "UniqueIdentifierAvailable";
+
+        const string FindIdByNameHashProcedure = "FindIdByNameHash";
 
         public DisplayNameHandler(ILogger<DisplayNameHandler<TFullDisplayNameType>> _Logger, ISqlDataAccess _db, ILogger<QueryCache<string, dynamic>> cacheLogger, IFriendHandler friendHandler)
         {
@@ -102,6 +105,9 @@ namespace DingoDataAccess.Account
                 return false;
             }
 
+            // make sure the display name has no leading or trailing whitespace
+            newDisplayName = newDisplayName.Trim();
+
             // get the old display name to check to see if we need to update or set the name
             IFriendModel myFriendInfo = await friendHandler.GetFriend(Id);
 
@@ -124,19 +130,17 @@ namespace DingoDataAccess.Account
 
             try
             {
-                // check to make sure the unique id for this person isn't taken for the next username they are switching to
-                if (await UniqueIdentifierAvailable(newDisplayName, myFriendInfo.UniqueIdentifier) is false)
+                if (myFriendInfo != null)
                 {
-                    // since the indentifier was taken get another one and then set it
-                    short? newUniqueId = await GetAvailableUniqueIdentifier(newDisplayName);
-
-                    if (newUniqueId is null)
+                    // check to make sure the unique id for this person isn't taken for the next username they are switching to
+                    if (await UniqueIdentifierAvailable(newDisplayName, myFriendInfo.UniqueIdentifier) is false)
                     {
-                        logger.LogError("Failed to change for {Id} Name: {NewDisplayName} null unique Id retrieved", Id, newDisplayName);
-                        return false;
+                        await SetRandomUniqueIdentifier(Id, newDisplayName);
                     }
-
-                    await SetUniqueIdentifier(myFriendInfo.Id, (short)newUniqueId);
+                }
+                else
+                {
+                    await SetRandomUniqueIdentifier(Id, newDisplayName);
                 }
 
                 // change or set the name
@@ -181,10 +185,18 @@ namespace DingoDataAccess.Account
             {
                 return false;
             }
+            try
+            {
+                await db.ExecuteVoidProcedure(SetUniqueIdentifiersProceduree, new { Id, UniqueIdentifier });
 
-            await db.ExecuteVoidProcedure(SetUniqueIdentifiersProceduree, new { Id, UniqueIdentifier });
+                return true;
+            }
+            catch (Exception e)
+            {
+                logger.LogError("Failed to set unique identitfier for {id}#{num} Error: {Error}", Id, UniqueIdentifier, e);
+                return false;
+            }
 
-            return true;
         }
 
         /// <summary>
@@ -199,27 +211,39 @@ namespace DingoDataAccess.Account
                 return null;
             }
 
-            // try to prevent sql
-            Helpers.CleanInputBasic(ref FormattedDisplayName);
-
-            if (Helpers.TrySeperateDisplayName(ref FormattedDisplayName, out var result))
+            try
             {
-                string DisplayName = result.DisplayName;
+                // hash the name with sha256 and look it up, it's hashed to prevent sql injection since this is one of the few entry points to the db that needs user input
+                var ids = await GetIdsWithName(FormattedDisplayName);
 
-                List<TFullDisplayNameType> displayNames = await db.ExecuteProcedure<TFullDisplayNameType, dynamic>(SearchForFriendProcedure, new { DisplayName });
-
-                if (displayNames?.Count is null or 0 || displayNames.Count > 1)
+                // when the name was hashed it matched no values
+                if (ids.Count is 0)
                 {
                     return null;
                 }
 
-                if (displayNames[0].UniqueIdentifier == result.UniqueIdentifier)
+                // when hashed it only matched one hash
+                if (ids.Count is 1)
                 {
-                    return displayNames[0].Id;
+                    return ids[0];
                 }
-            }
 
-            return null;
+                // since multiple names hashed to the same value determine if any of them match the provided name
+                foreach (var item in ids)
+                {
+                    if (await GetDisplayName(item) == FormattedDisplayName)
+                    {
+                        return item;
+                    }
+                }
+
+                return null;
+            }
+            catch (Exception e)
+            {
+                logger.LogError("Failed to find friend with name {FormattedDisplayName} Error: {Error}", FormattedDisplayName, e);
+                return null;
+            }
         }
 
         /// <summary>
@@ -232,19 +256,66 @@ namespace DingoDataAccess.Account
         {
             try
             {
-                List<string> found = await db.ExecuteProcedure<string, dynamic>(UniqueIdentifierAvailableProcedure, new { DisplayName, UniqueIdentifier });
+                var found = await GetIdsWithName(DisplayName, UniqueIdentifier);
 
-                if (found?.Count is null or 0)
-                {
-                    return true;
-                }
-
-                return false;
+                return found?.Count is null or 0;
             }
             catch (Exception e)
             {
                 logger.LogError("Failed to check if identifier take Error:{Error}", e);
                 return false;
+            }
+        }
+
+        private async Task<bool> SetRandomUniqueIdentifier(string Id, string DisplayName)
+        {
+            try
+            {
+                // since the indentifier was taken get another one and then set it
+                short? newUniqueId = await GetAvailableUniqueIdentifier(DisplayName);
+
+                if (newUniqueId is null)
+                {
+                    logger.LogError("Failed to change for {Id} Name: {NewDisplayName} null unique Id retrieved", Id, DisplayName);
+                    return false;
+                }
+
+                await SetUniqueIdentifier(Id, (short)newUniqueId);
+
+                return true;
+            }
+            catch (Exception e)
+            {
+                logger.LogError("Failed to change for {Id} Name: {NewDisplayName} Error: {Error}", Id, DisplayName, e);
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Concats then Hashes the input and finds it in the DB
+        /// </summary>
+        /// <param name="DisplayNameAndIdentifier"></param>
+        /// <returns></returns>
+        private Task<List<string>> GetIdsWithName(string DisplayName, short UniqueIdentifier) => GetIdsWithName($"{DisplayName}#{UniqueIdentifier}");
+
+        /// <summary>
+        /// Hashes the input and finds it in the DB
+        /// </summary>
+        /// <param name="DisplayNameAndIdentifier"></param>
+        /// <returns></returns>
+        private async Task<List<string>> GetIdsWithName(string DisplayNameAndIdentifier)
+        {
+            try
+            {
+                // hash the name of sha256
+                string NameHash = Encoding.Unicode.GetString(SHA256.HashData(Encoding.Unicode.GetBytes(DisplayNameAndIdentifier)));
+
+                return await db.ExecuteProcedure<string, dynamic>(FindIdByNameHashProcedure, new { NameHash }) ?? new();
+            }
+            catch (Exception e)
+            {
+                logger.LogError("Failed to get Id for name {Name} Error: {Error}", DisplayNameAndIdentifier, e);
+                return new();
             }
         }
     }

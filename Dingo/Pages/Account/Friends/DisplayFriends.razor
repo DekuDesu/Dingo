@@ -1,14 +1,9 @@
-﻿@using DingoDataAccess.Models.Friends
+﻿@inject ILogger<DisplayFriends> logger
 
-@inject ILogger<DisplayFriends> logger
-@inject IFriendListHandler friendlistHandler
-@inject IFriendHandler friendHandler
-
-@implements IDisposable
 
 <table class="table table-striped border rounded table-hover">
     <tbody>
-        @if (Friends.Count == 0)
+        @if (TopLevel?.Friends?.Count is null or 0)
         {
             <tr scope="row">
                 <td class="d-flex justify-content-between">
@@ -20,9 +15,9 @@
         }
         else
         {
-            @foreach (var item in Friends)
+            @foreach (var item in TopLevel.Friends)
             {
-                <FriendEntry Id=@Id Friend=@item Friends=@Friends StateChangedCallback=@StateChangedCallback />
+                <FriendEntry Friend=@item />
             }
         }
     </tbody>
@@ -32,59 +27,29 @@
     [Parameter]
     public string Id { get; set; }
 
-    private List<IFriendModel> Friends { get; set; } = new();
-
-    private int RefreshPollingRate = 15_000;
+    [CascadingParameter(Name = nameof(TopLevel))]
+    public TopLevelObjects TopLevel { get; set; }
 
     private Random rng = new();
 
-    private List<string> NoFriendMessage = new()
+    private List<string>
+        NoFriendMessage = new()
+        {
+                "No Friends yet, add them above! ༼  ୧ ಠ ᴥ ಠ ༽ノ",
+                "Welcome! Add some friends using the button above! (๑•́ ヮ •̀๑)",
+                "Woohoo! Time to add some friends! ٩(^‿^)۶",
+                "(✿◠‿◠) Add some friends above!",
+                "ᕙ(`▽´)ᕗ Time to add my friends, yeah!",
+                "※\\(^o^)/※ Friend Time! 	※\\(^o^)/※",
+            };
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-            "No Friends yet, add them above! ༼  ୧ ಠ ᴥ ಠ ༽ノ",
-            "Welcome! Add some friends using the button above! (๑•́ ヮ •̀๑)",
-            "Woohoo! Time to add some friends! ٩(^‿^)۶",
-            "(✿◠‿◠) Add some friends above!",
-            "ᕙ(`▽´)ᕗ Time to add my friends, yeah!",
-            "※\\(^o^)/※ Friend Time! 	※\\(^o^)/※",
-        };
-
-    private System.Timers.Timer RefreshTimer = new();
-
-    protected override async Task OnParametersSetAsync()
-    {
-
-        await base.OnParametersSetAsync();
-    }
-
-    protected override async Task OnInitializedAsync()
-    {
-        await GetFriends();
-
-        await base.OnInitializedAsync();
-
-        logger.LogInformation("Initialized Component {ComponentName} Params: {Param1}:{Param1Value}", nameof(DisplayFriends), nameof(Id), Id);
-
-        RefreshTimer.Interval = RefreshPollingRate;
-        RefreshTimer.AutoReset = true;
-        RefreshTimer.Elapsed += async (x, y) => await GetFriends();
-        RefreshTimer.Start();
-    }
-
-    private async Task GetFriends()
-    {
-        Friends = await friendHandler.GetFriendList(Id);
-        await InvokeAsync(() => StateHasChanged());
-    }
-
-    private void StateChangedCallback()
-    {
-        StateHasChanged();
-    }
-
-    public void Dispose()
-    {
-        RefreshTimer?.Stop();
-        RefreshTimer?.Close();
-        RefreshTimer?.Dispose();
+        if (firstRender)
+        {
+            await TopLevel.GetFriends.Invoke();
+            TopLevel.StateHasChanged();
+        }
+        await base.OnAfterRenderAsync(firstRender);
     }
 }

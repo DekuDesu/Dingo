@@ -9,7 +9,7 @@
 @inject IStatusHandler statusHandler
 
 <div class="top-row pl-4 navbar navbar-dark">
-    <a class="navbar-brand mx-4" href="" @onclick=ResetMessageCallbackReference>
+    <a class="navbar-brand mx-4" href="" @onclick="HideChat">
         <img src="/Images/Dingo256.webp" class="" height="50" width="50" /> Dingo
     </a>
     <button class="navbar-toggler" @onclick="ToggleNavMenu">
@@ -44,8 +44,10 @@
                 <li class="nav-item px-3 my-2 align-self-center w-100" style="text-align: center; max-width: 500px;">
                     <Dingo.Pages.Account.Avatar />
                     <div class="">
-                        <span class="oi oi-pencil py-1 d-none d-md-inline mx-1" style="color: white;cursor:pointer;" @onclick="ShowEditDisplayName"></span>
-                        <span class="text-wrap" style="max-width: 250px; color: white; font-weight:bold; font-size: large;">@(DisplayName ?? "Loading")</span>
+                        <span class="oi oi-pencil py-1 d-none d-md-inline mx-1" style="color: white;cursor:pointer;" @onclick=@ShowEditDisplayName></span>
+                        <span class="text-wrap" style="max-width: 250px; color: white; font-weight:bold; font-size: large;">
+                            @MyFriendInfo?.DisplayName
+                        </span>
                         <span style="color: grey; font-size: 1em; font-weight: bold;">
                             #@(MyFriendInfo?.UniqueIdentifier.ToString() ?? "Loading")
                         </span>
@@ -79,10 +81,7 @@
     [CascadingParameter(Name = "MyFriendInfo")]
     public IFriendModel MyFriendInfo { get; set; }
 
-    [CascadingParameter(Name = "messageCallbackReference")]
-    protected MessageCallbackReference messageCallbackReference { get; set; }
-
-    [CascadingParameter(Name = "TopLevel")]
+    [CascadingParameter(Name = nameof(TopLevel))]
     public TopLevelObjects TopLevel { get; set; }
 
     private bool collapseNavMenu = true;
@@ -92,20 +91,19 @@
     protected override async Task OnInitializedAsync()
     {
         await base.OnInitializedAsync();
-
-        logger.LogInformation("Initialized Component {ComponentName} Params: {Param1}:{Param1Value} {Param2}:{Param2Value} {Param3}:{Param3Value}", nameof(NavMenu), nameof(Id), Id, nameof(DisplayName), DisplayName, nameof(MyFriendInfo), MyFriendInfo);
-
-        // attack a callback to the message call back, this make it so when we view a message it hides the nav menu
-        messageCallbackReference.Callback += HideNavMenu;
     }
 
-    private async Task ResetMessageCallbackReference()
+    private void HideChat()
     {
-        messageCallbackReference.FriendId = string.Empty;
 
         collapseNavMenu = true;
 
-        await messageCallbackReference.Callback?.Invoke();
+        if (TopLevel != null)
+        {
+            TopLevel.CurrentChatId = null;
+            TopLevel.ShowChatInterface = false;
+            TopLevel.StateHasChanged();
+        }
     }
 
     private async Task HideNavMenu()
@@ -123,6 +121,7 @@
     private void ShowEditDisplayName()
     {
         TopLevel.ShowChangeDisplayName = true;
+        TopLevel.StateHasChanged();
     }
 
     public void Dispose()

@@ -92,8 +92,6 @@
     protected override async Task OnInitializedAsync()
     {
         await base.OnInitializedAsync();
-
-        logger.LogInformation("Initialized Component {ComponentName} Params: {Param1}:{Param1Value}", nameof(AddFriend), nameof(Id), Id);
     }
 
     private void UpdateButton(string text, ButtonState state = ButtonState.normal, bool spinner = false)
@@ -139,15 +137,24 @@
             // update the button to show that we are working on changing the name
             UpdateButton(SearchingText[rng.Next(0, SearchingText.Length)], ButtonState.normal, true);
 
-            string foundId = await displayNameHander.GetIdFromDisplayName(displayName.DisplayName);
+            // names are hashed in the format name#1234 and name is trimmed and lowered before hash
+            string displayNameFormatted = displayName.DisplayName;
 
-            logger.LogInformation("Found Id {Id} for {FriendId}", foundId, displayName.DisplayName);
+            // remove the space between the hash and the display name if there is one
+            if (DingoDataAccess.Helpers.TrySeperateDisplayName(ref displayNameFormatted, out var result))
+            {
+                displayNameFormatted = $"{result.DisplayName.Trim().ToLower()}#{result.UniqueIdentifier}";
+            }
+
+            string foundId = await displayNameHander.GetIdFromDisplayName(displayNameFormatted);
 
             if (foundId?.Length is null or 0)
             {
                 // don't allow users to know that we instantly invalidated their request
                 await Dingo.Helpers.Sleep(500);
+
                 UpdateButton(NotFoundText[rng.Next(0, NotFoundText.Length)], ButtonState.failed, false);
+
                 return;
             }
 

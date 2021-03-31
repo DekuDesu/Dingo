@@ -56,10 +56,6 @@ namespace DingoDataAccess.Account
 
             OnlineStatus status = await db.ExecuteSingleProcedure<OnlineStatus, dynamic>(procedure, new { Id });
 
-
-            logger.LogInformation("{ProcedureName} fetched for {Id} to {Value}", procedure, Id, status);
-
-
             return (true, status);
         }
 
@@ -72,8 +68,6 @@ namespace DingoDataAccess.Account
             }
 
             await db.ExecuteVoidProcedure(procedure, new { Id, Status });
-
-            logger.LogInformation("{ProcedureName} set for {Id} to {Value}", procedure, Id, Status);
 
             return true;
         }

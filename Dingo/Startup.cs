@@ -117,6 +117,9 @@ namespace Dingo
             // access to databases
             services.AddTransient<ISqlDataAccess, SqlDataAccess>();
 
+            services.AddTransient<ITopLevelObjects, TopLevelObjects>();
+
+
             services.AddSingleton<IFullDisplayNameModel, FullDisplayNameModel>();
 
             // defines a friend that holds information about users in general
@@ -171,6 +174,9 @@ namespace Dingo
             services.AddTransient(typeof(IBundleProcessor), typeof(BundleProcessor<KeyBundleModel<SignedKeyModel>, EncryptedDataModel, SignedKeyModel>));
 
             services.AddTransient<IAvatarHandler, AvatarHandler>();
+
+            services.AddTransient<IConcurrentTimerDictionary, ConcurrentTimerDictionary>();
+
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

@@ -22,14 +22,25 @@
     public IFriendModel Friend { get; set; }
 
     [Parameter]
+    public Func<IFriendModel, Task> OnClick { get; set; }
+
+    [Parameter]
     public bool UnreadMessage { get; set; } = true;
 
-    [CascadingParameter(Name = "messageCallbackReference")]
-    protected MessageCallbackReference messageCallbackReference { get; set; }
+    [CascadingParameter(Name = nameof(TopLevel))]
+    public TopLevelObjects TopLevel { get; set; }
 
-    private async Task Click()
+    private void Click()
     {
-        messageCallbackReference.FriendId = Friend.Id;
-        await messageCallbackReference.Callback?.Invoke();
+        OnClick?.Invoke(Friend);
+
+        if (TopLevel.CurrentChatId != Friend.Id)
+        {
+            TopLevel.CurrentChatId = Friend.Id;
+
+            TopLevel.ShowChatInterface = true;
+        }
+
+        TopLevel.StateHasChanged();
     }
 }

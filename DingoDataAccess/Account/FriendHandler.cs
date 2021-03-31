@@ -56,7 +56,6 @@ namespace DingoDataAccess.Account
 
             var friendIds = await ListSource(Id);
 
-            logger.LogInformation("Found {NumberOfFriends} friends for {Id}", friendIds.Count, Id);
 
             if (friendIds?.Count is null or 0)
             {
@@ -69,20 +68,15 @@ namespace DingoDataAccess.Account
 
                 if (foundFriend != null)
                 {
-                    logger.LogInformation("Added friend {FriendModel}", foundFriend);
                     friends.Add(foundFriend);
                 }
             }
-
-            logger.LogInformation("Retrived friends list for {Id} List: {RawList}", Id, friends);
 
             return friends;
         }
 
         public async Task<IFriendModel> GetFriend(string Id)
         {
-            logger.LogInformation("Fetching friend model for: {Id}", Id);
-
             // make sure the id we got is a valid Guid
             if (Helpers.FullVerifyGuid(ref Id, logger) is false)
             {
@@ -105,8 +99,11 @@ namespace DingoDataAccess.Account
 
             await Cache.UpdateOrCache(GetFriendProcedure, parameters, result);
 
-            // get the avatar for the user, this is segregated into it's own table incase further more serious segregation is needed
-            result.AvatarPath = await avatarHandler.GetAvatar(result.Id) ?? "/Images/DefaultAvatar.webp";
+            if (result != null)
+            {
+                // get the avatar for the user, this is segregated into it's own table incase further more serious segregation is needed
+                result.AvatarPath = await avatarHandler.GetAvatar(result.Id) ?? "/Images/DefaultAvatar.webp";
+            }
 
             return result;
         }
@@ -162,7 +159,6 @@ namespace DingoDataAccess.Account
 
         private async Task<bool> AddRemoveRequest(string Id, string IdToAddOrRemove, bool add)
         {
-            logger.LogInformation("{ShouldAdd} friend request {FriendId} from {Id}", add ? "Adding" : "Removing", IdToAddOrRemove, Id);
 
             // make sure the id we got is a valid Guid
             if (Helpers.FullVerifyGuid(ref Id, logger) is false)

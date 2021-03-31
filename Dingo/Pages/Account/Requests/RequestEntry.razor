@@ -90,10 +90,10 @@
     public IFriendModel friend { get; set; }
 
     [Parameter]
-    public List<IFriendModel> Requests { get; set; }
-
-    [Parameter]
     public Action StateHasChangedCallback { get; set; }
+
+    [CascadingParameter(Name = nameof(TopLevel))]
+    public TopLevelObjects TopLevel { get; set; }
 
     private string IconSize = "font-size: xx-large;";
 
@@ -151,16 +151,10 @@
     private void ToggleHovering_Ignore() => hoveringIgnore = !hoveringIgnore;
     private void ToggleHovering_Block() => hoveringBlock = !hoveringBlock;
 
-    protected override async Task OnInitializedAsync()
-    {
-        await base.OnInitializedAsync();
 
-        logger.LogInformation("Initialized Component {ComponentName} Params: {Param1}:{Param1Value} {Param2}:{Param2Value} {Param3}:{Param3Value}", nameof(RequestEntry), nameof(Id), Id, nameof(friend), friend, nameof(Requests), Requests);
-    }
-
-    private Task Wait()
+    private void RemoveFromTopLevelList()
     {
-        return Task.Run(() => System.Threading.Thread.Sleep(500));
+        TopLevel.AlreadyPushedRequestIds.Remove(friend.Id);
     }
 
     private async Task AcceptRequest()
@@ -171,8 +165,6 @@
         }
         BlockInput = true;
         ShowSpinner = 0;
-
-        await Wait();
 
         // create a shared secret and send our key bundle to the other party so we can chat
         await bundleProcessor.CreateSecretAndSendBundle(Id, friend.Id);
@@ -189,14 +181,16 @@
         // remove them from our request list
         await friendHandler.RemoveRequest(Id, friend.Id);
 
+        RemoveFromTopLevelList();
+
         // remove them from the list
-        Requests.Remove(friend);
+        TopLevel.FriendRequests.Remove(friend);
 
         ShowSpinner = -1;
         BlockInput = false;
 
         // notify our parent component that we have changed and it should re-draw the request list
-        StateHasChangedCallback?.Invoke();
+        TopLevel.StateHasChanged?.Invoke();
     }
 
     private async Task IgnoreRequest()
@@ -208,22 +202,22 @@
         BlockInput = true;
         ShowSpinner = 1;
 
-        await Wait();
-
         // remove their encryption key bundle from our bundle list since we aren't going to use it
         await bundleHandler.RemoveBundle(Id, friend.Id);
 
         // remove them from our request list
         await friendHandler.RemoveRequest(Id, friend.Id);
 
+        RemoveFromTopLevelList();
+
         // remove them from the list
-        Requests.Remove(friend);
+        TopLevel.FriendRequests.Remove(friend);
 
         ShowSpinner = -1;
         BlockInput = false;
 
         // notify our parent component that we have changed and it should re-draw the request list
-        StateHasChangedCallback?.Invoke();
+        TopLevel.StateHasChanged?.Invoke();
     }
 
     private async Task BlockRequest()
@@ -236,8 +230,6 @@
         BlockInput = true;
         ShowSpinner = 2;
 
-        await Wait();
-
         // remove their encryption key bundle from our bundle list since we aren't going to use it
         await bundleHandler.RemoveBundle(Id, friend.Id);
 
@@ -246,13 +238,15 @@
         // remove them from our request list
         await friendHandler.RemoveRequest(Id, friend.Id);
 
+        RemoveFromTopLevelList();
+
         // remove them from the list
-        Requests.Remove(friend);
+        TopLevel.FriendRequests.Remove(friend);
 
         ShowSpinner = -1;
         BlockInput = false;
 
         // notify our parent component that we have changed and it should re-draw the request list
-        StateHasChangedCallback?.Invoke();
+        TopLevel.StateHasChanged?.Invoke();
     }
 }

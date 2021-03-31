@@ -15,7 +15,8 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" @onclick=@Cancel></button>
             </div>
             <div class="modal-body" style="text-align: center;">
-                <EditForm Context="User" @bind-model="newUsername" OnValidSubmit="@UpdateUsername">
+                <EditForm Context="User" @bind-model="newUsername" OnValidSubmit="@Submit">
+                    <label class="form-label" style="color:red; font-weight: bold;">@ValidationError</label>
                     <InputText class="form-control my-2" @bind-Value=@newUsername.Term />
                 </EditForm>
             </div>
@@ -39,7 +40,7 @@
     [CascadingParameter(Name = "MyFriendInfo")]
     public IFriendModel MyFriendInfo { get; set; }
 
-    [CascadingParameter(Name = "TopLevel")]
+    [CascadingParameter(Name = nameof(TopLevel))]
     public TopLevelObjects TopLevel { get; set; }
 
     [CascadingParameter(Name = "DisplayName")]
@@ -53,8 +54,10 @@
 
     public string SubmitText { get; set; } = "Save";
 
-    private string ModelClass => TopLevel.ShowChangeDisplayName ? "modal fade show" : "modal fade";
-    private string ModalStyle => TopLevel.ShowChangeDisplayName ? "display: unset;" : "display: none;";
+    private string ModelClass => TopLevel?.ShowChangeDisplayName is true ? "modal fade show" : "modal fade";
+    private string ModalStyle => TopLevel?.ShowChangeDisplayName is true ? "display: unset;" : "display: none;";
+
+    private string ValidationError = "";
 
     private bool blockInput = false;
 
@@ -82,9 +85,13 @@
 
         blockInput = true;
 
-        await UpdateUsername();
+        ValidationError = "";
 
-        TopLevel.ShowChangeDisplayName = false;
+        if (await UpdateUsername())
+        {
+            TopLevel.ShowChangeDisplayName = false;
+            UpdateButton("Change", false, false);
+        }
 
         TopLevel.StateHasChanged();
 
@@ -96,6 +103,8 @@
     private string ButtonClass = "btn btn-primary";
     private string CheckStyle = "display: none";
 
+    private const string blacklisted = ";=-\\`'";
+
     private void UpdateButton(string text, bool complete, bool spinner)
     {
         SpinnerStyle = spinner ? "" : "display: none;";
@@ -104,24 +113,73 @@
         CheckStyle = complete ? "" : "display: none;";
     }
 
-    private async Task UpdateUsername()
+    private async Task<bool> UpdateUsername()
     {
         // make sure the name isnt empty
         if (string.IsNullOrEmpty(newUsername.Term))
         {
-            return;
+            ValidationError = "New Display Name is required";
+            return false;
         }
 
         if (string.IsNullOrWhiteSpace(newUsername.Term))
         {
-            return;
+            ValidationError = "New Display Name is required";
+            return false;
         }
 
         // make sure it's not the same name
         if (newUsername.Term == DisplayName)
         {
-            return;
+            ValidationError = "ಠ_ಠ You're already named that... ಠ_ಠ";
+            return false;
         }
+
+        if (newUsername.Term.Contains("1=1"))
+        {
+            ValidationError = "You can try better than that (◡︵◡)";
+            return false;
+        }
+
+        if (newUsername.Term.Contains("Robert'); DROP TABLE Students;--"))
+        {
+            ValidationError = "Well, we've lost this year's student records. I hope you're happy.";
+            return false;
+        }
+
+        if (newUsername.Term.Contains("DROP TABLE"))
+        {
+            ValidationError = "୧༼ಠ益ಠ༽︻╦╤─ - - - - -";
+            return false;
+        }
+
+        if (newUsername.Term.Contains("SELECT *"))
+        {
+            ValidationError = $"{new System.Random().Next()} ROWS AFFECTED;";
+            return false;
+        }
+
+        if (newUsername.Term.Contains("');"))
+        {
+            ValidationError = "I'm watching you. (☉_⚆)";
+            return false;
+        }
+
+        if (newUsername.Term.Contains("<script>"))
+        {
+            ValidationError = "ㆆ _ ㆆ";
+            return false;
+        }
+
+        foreach (var item in blacklisted)
+        {
+            if (newUsername.Term.Contains(item))
+            {
+                ValidationError = $"Name can't contain: {string.Join("  ", blacklisted.ToCharArray())}";
+                return false;
+            }
+        }
+
 
         // update the button to show that we are working on changing the name
         UpdateButton("Changing", false, true);
@@ -132,13 +190,12 @@
         // set / update the name, this uses parameterized procedures and rewplaces ; and ' limiting sql injection opportunities
         if (await nameHandler.SetDisplayName(Id, newUsername.Term))
         {
-            // get my friend info again
-            MyFriendInfo = await friendHandler.GetFriend(Id);
-
-            TopLevel.StateHasChanged();
-
             // update the field so we cant change the name multiple times to the same thing
             DisplayName = newUsername.Term;
+
+            MyFriendInfo.DisplayName = newUsername.Term;
+
+            TopLevel.StateHasChanged();
 
             // this is to make the user feel like the username has really been changed
             await Task.Run(() => System.Threading.Thread.Sleep(500));
@@ -150,7 +207,7 @@
             TopLevel.toasts.Add(new ToastModel()
             {
                 Timeout = TimeSpan.FromSeconds(5),
-                Content = $"Display name sucessfully changed to {DisplayName} ٩(^‿^)۶",
+                Content = $"Display name sucessfully changed to {newUsername.Term} ٩(^‿^)۶",
                 Title = "Success!"
             });
         }
@@ -166,5 +223,7 @@
         }
 
         TopLevel.StateHasChanged();
+
+        return true;
     }
 }

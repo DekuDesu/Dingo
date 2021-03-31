@@ -21,6 +21,7 @@
             <div class="modal-body" style="text-align: center;">
                 <img src=@AvatarPath class="w-50 h-50 rounded-circle my-3 ratio ratio-1x1" style="max-height: 256px; max-width: 256px;" />
                 <Dingo.Pages.Components.UploadFile OnUploadedCallback=@OnFileChange MaxFileSize=@MaxFileSize AllowableFileExtensions=@AllowableExt />
+                <label style="color: red; font-weight: bold;">@ValidationError</label>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" @onclick=@Cancel>@CancelText</button>
@@ -38,7 +39,7 @@
     [CascadingParameter(Name = "MyFriendInfo")]
     public IFriendModel MyFriendInfo { get; set; }
 
-    [CascadingParameter(Name = "TopLevel")]
+    [CascadingParameter(Name = nameof(TopLevel))]
     public TopLevelObjects TopLevel { get; set; }
 
     public string Title { get; set; } = "Change Avatar";
@@ -47,8 +48,8 @@
 
     public string SubmitText { get; set; } = "Save";
 
-    private string ModelClass => TopLevel.ShowChangeAvatar ? "modal fade show" : "modal fade";
-    private string ModalStyle => TopLevel.ShowChangeAvatar ? "display: unset;" : "display: none;";
+    private string ModelClass => TopLevel?.ShowChangeAvatar is true ? "modal fade show" : "modal fade";
+    private string ModalStyle => TopLevel?.ShowChangeAvatar is true ? "display: unset;" : "display: none;";
 
     private const int MaxFileSize_Megabytes = 5;
 
@@ -63,6 +64,8 @@
     private string AvatarPath => newAvatarPath ?? MyFriendInfo?.AvatarPath ?? "/Images/DefaultAvatar.webp";
 
     private string newAvatarPath = null;
+
+    private string ValidationError = "";
 
     private void Cancel()
     {
@@ -118,6 +121,7 @@
         catch (Exception e)
         {
             logger.LogInformation("Error in encoding image Error{Error}", e);
+            ValidationError = "Failed to upload file";
         }
     }
 
@@ -130,14 +134,26 @@
 
         blockInput = true;
 
-        await avatarHandler.SetAvatar(Id, newAvatarPath);
+        if (await avatarHandler.SetAvatar(Id, newAvatarPath))
+        {
+            TopLevel.ShowChangeAvatar = false;
 
-        TopLevel.ShowChangeAvatar = false;
+            // reset the image path so we dont show the last one
+            newAvatarPath = null;
+
+            TopLevel.toasts.Add(new Data.GeneralModels.ToastModel()
+            {
+                Content = "You have successfully changed your avatar! ⊂(◉‿◉)つ",
+                Timeout = TimeSpan.FromSeconds(5),
+                Title = "Success!"
+            });
+        }
+        else
+        {
+            ValidationError = "Failed to upload file";
+        }
 
         TopLevel.StateHasChanged();
-
-        // reset the image path so we dont show the last one
-        newAvatarPath = null;
 
         blockInput = false;
     }

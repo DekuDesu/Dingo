@@ -43,7 +43,7 @@ namespace DingoDataAccess
 
                     T item = Dict[key];
 
-                    logger.LogInformation("Found cached item for {Query} Item: {Item}", key, item);
+                    //logger.LogInformation("Found cached item for {Query} Item: {Item}", key, item);
 
                     return item;
                 }
@@ -95,7 +95,7 @@ namespace DingoDataAccess
 
                 ExpirationTimers.Add((newExpirationTimer, (query, parameters)));
 
-                logger.LogInformation("Cached item for {Query} Item: {Item}", key, itemToCache);
+                //logger.LogInformation("Cached item for {Query} Item: {Item}", key, itemToCache);
             }
             finally
             {
