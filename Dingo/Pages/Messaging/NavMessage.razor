@@ -27,7 +27,7 @@
     [Parameter]
     public bool UnreadMessage { get; set; } = true;
 
-    [CascadingParameter(Name = "TopLevel")]
+    [CascadingParameter(Name = nameof(TopLevel))]
     public TopLevelObjects TopLevel { get; set; }
 
     private void Click()

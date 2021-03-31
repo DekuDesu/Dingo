@@ -29,7 +29,7 @@ else
     [CascadingParameter(Name = "Id")]
     protected string Id { get; set; }
 
-    [CascadingParameter(Name = "TopLevel")]
+    [CascadingParameter(Name = nameof(TopLevel))]
     public TopLevelObjects TopLevel { get; set; }
 
     private const string NoMessagesText = "ʕ•ᴥ•ʔ All Caught Up!";
@@ -44,7 +44,7 @@ else
     {
         Messages.Remove(friend);
 
-        TopLevel.WaitingSenderIds.Remove(friend.Id);
+        TopLevel.AlreadyPushedMessageIds.Remove(friend.Id);
 
         await InvokeAsync(() => StateHasChanged());
     }
@@ -69,9 +69,9 @@ else
 
         foreach (var item in waitingMessages)
         {
-            if (TopLevel.WaitingSenderIds.Contains(item.SenderId) is false)
+            if (TopLevel.AlreadyPushedMessageIds.Contains(item.SenderId) is false)
             {
-                TopLevel.WaitingSenderIds.Add(item.SenderId);
+                TopLevel.AlreadyPushedMessageIds.Add(item.SenderId);
 
                 Ids.Add((item.SenderId, item.TimeSent));
 
@@ -86,7 +86,7 @@ else
         }
 
         // remove the read messages
-        foreach (var item in TopLevel.WaitingSenderIds)
+        foreach (var item in TopLevel.AlreadyPushedMessageIds)
         {
             var found = Messages.Where(x => x.Id == item).FirstOrDefault();
             if (found != default)

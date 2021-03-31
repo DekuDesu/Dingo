@@ -6,10 +6,10 @@
 
 @using DingoDataAccess.Models.Friends
 
-<CascadingValue Value=@TopLevel Name="TopLevel">
-    <CascadingValue Value=@Id Name="Id">
-        <CascadingValue Value=@DisplayName Name="DisplayName">
-            <CascadingValue Value=@MyFriendInfo Name="MyFriendInfo">
+<CascadingValue Value=@TopLevel Name=@nameof(TopLevel)>
+    <CascadingValue Value=@Id Name=@nameof(Id)>
+        <CascadingValue Value=@DisplayName Name=@nameof(DisplayName)>
+            <CascadingValue Value=@MyFriendInfo Name=@nameof(MyFriendInfo)>
                 <div class="sidebar">
                     <NavMenu />
                 </div>
@@ -48,7 +48,6 @@
     protected override async Task OnInitializedAsync()
     {
         await base.OnInitializedAsync();
-
         // only get the id and name if its not passed a param as a component
         // this helps reduce the # of requests to the DB
         // check to see if we need to get the display and id to change the name
@@ -62,6 +61,15 @@
         TopLevel.StateHasChanged = () => InvokeAsync(() => TopLevelStateChange());
 
         await SetupTimers();
+
+
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+
+
+        await base.OnParametersSetAsync();
     }
 
     private async Task SetOnlineStatus()
@@ -107,13 +115,30 @@
         StateHasChanged();
     }
 
+    /// <summary>
+    /// Sets up all the timers that should run periodically for this user
+    /// </summary>
+    /// <returns></returns>
     private async Task SetupTimers()
     {
+        // get any friends requests peridically
         await TopLevel.AddTimer(15_000, GetFriendRequests, nameof(Dingo.Pages.Account.Requests.ViewRequests));
+
         // make sure to set the override so when the user manually navigates to the request component they can force a refresh without having to wait
         TopLevel.GetFriendRequests = GetFriendRequests;
+
+        // update the friends list from the server periodically
+
+        await TopLevel.AddTimer(15_000, async () => await GetFriends(), nameof(Dingo.Pages.Account.Friends.DisplayFriends));
+
+        // make sure other objects can force-check for friends
+        TopLevel.GetFriends = GetFriends;
     }
 
+    /// <summary>
+    /// retrieves waiting friend requests from server and sends a toast notification when they arrive
+    /// </summary>
+    /// <returns></returns>
     private async Task GetFriendRequests()
     {
         var newRequests = await friendHandler.GetRequests(Id);
@@ -122,8 +147,10 @@
 
         foreach (var item in newRequests)
         {
-            if (TopLevel.WaitingRequestIds.Contains(item.Id) is false)
+            // if we already sent a notification this session we shouldn't send another toast
+            if (TopLevel.AlreadyPushedRequestIds.Contains(item.Id) is false)
             {
+                // since the id wasn't in the list that contains the already pushed toasts send a toast
                 TopLevel.toasts.Add(new Data.GeneralModels.ToastModel()
                 {
                     Content = $"{item.DisplayName}#{item.UniqueIdentifier} sent you a friend request.",
@@ -131,15 +158,29 @@
                     Timeout = TimeSpan.FromSeconds(20)
                 });
 
-                TopLevel.WaitingRequestIds.Add(item.Id);
+                // add the id to the list so we dont send more toasts about the same notification
+                TopLevel.AlreadyPushedRequestIds.Add(item.Id);
 
+                // mark the list as changed so we can push another render to the UI
                 changed = true;
             }
         }
 
         if (changed)
         {
+            // since the list changed add it
             TopLevel.FriendRequests = newRequests;
         }
+
+        // the UI is automatically updated when this function is called from the TopLevel
+    }
+
+    /// <summary>
+    /// Retrieves the friends that the current user has added to their friendlist from the server
+    /// </summary>
+    /// <returns></returns>
+    private async Task GetFriends()
+    {
+        TopLevel.Friends = await friendHandler.GetFriendList(Id);
     }
 }

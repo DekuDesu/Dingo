@@ -40,7 +40,7 @@
     [CascadingParameter(Name = "MyFriendInfo")]
     public IFriendModel MyFriendInfo { get; set; }
 
-    [CascadingParameter(Name = "TopLevel")]
+    [CascadingParameter(Name = nameof(TopLevel))]
     public TopLevelObjects TopLevel { get; set; }
 
     [CascadingParameter(Name = "DisplayName")]

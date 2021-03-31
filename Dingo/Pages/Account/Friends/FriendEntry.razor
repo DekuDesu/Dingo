@@ -54,7 +54,7 @@
     <Dingo.Pages.Components.Modal Title=@ReportModalTitle Content=@ReportModalContent SubmitText="Report" CancelText="Cancel" CancelCallback=@ModalCancel SubmitCallback=@Report></Dingo.Pages.Components.Modal>
 }
 @code {
-    [CascadingParameter(Name = "TopLevel")]
+    [CascadingParameter(Name = nameof(TopLevel))]
     protected TopLevelObjects TopLevel { get; set; }
 
     [CascadingParameter(Name = "Id")]

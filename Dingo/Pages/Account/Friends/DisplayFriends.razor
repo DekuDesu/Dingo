@@ -1,8 +1,4 @@
-﻿@using DingoDataAccess.Models.Friends
-
-@inject ILogger<DisplayFriends> logger
-@inject IFriendListHandler friendlistHandler
-@inject IFriendHandler friendHandler
+﻿@inject ILogger<DisplayFriends> logger
 
 
 <table class="table table-striped border rounded table-hover">
@@ -31,7 +27,7 @@
     [Parameter]
     public string Id { get; set; }
 
-    [CascadingParameter(Name = "TopLevel")]
+    [CascadingParameter(Name = nameof(TopLevel))]
     public TopLevelObjects TopLevel { get; set; }
 
     private Random rng = new();
@@ -47,18 +43,13 @@
                 "※\\(^o^)/※ Friend Time! 	※\\(^o^)/※",
             };
 
-
-    protected override async Task OnInitializedAsync()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        await GetFriends();
-
-        await base.OnInitializedAsync();
-
-        await TopLevel.AddTimer(15_000, async () => await GetFriends(), nameof(DisplayFriends));
-    }
-
-    private async Task GetFriends()
-    {
-        TopLevel.Friends = await friendHandler.GetFriendList(Id);
+        if (firstRender)
+        {
+            await TopLevel.GetFriends.Invoke();
+            TopLevel.StateHasChanged();
+        }
+        await base.OnAfterRenderAsync(firstRender);
     }
 }

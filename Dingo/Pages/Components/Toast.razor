@@ -22,7 +22,7 @@
     [Parameter]
     public ToastModel toast { get; set; } = new();
 
-    [CascadingParameter(Name = "TopLevel")]
+    [CascadingParameter(Name = nameof(TopLevel))]
     public TopLevelObjects TopLevel { get; set; }
 
     private double ProgressValue = 100;

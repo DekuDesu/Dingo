@@ -22,7 +22,7 @@
     [CascadingParameter(Name = "MyFriendInfo")]
     protected IFriendModel MyFriendInfo { get; set; }
 
-    [CascadingParameter(Name = "TopLevel")]
+    [CascadingParameter(Name = nameof(TopLevel))]
     protected TopLevelObjects TopLevel { get; set; }
 
     private bool DimAvatar = false;

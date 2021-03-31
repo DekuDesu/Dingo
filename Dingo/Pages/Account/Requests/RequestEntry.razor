@@ -92,7 +92,7 @@
     [Parameter]
     public Action StateHasChangedCallback { get; set; }
 
-    [CascadingParameter(Name = "TopLevel")]
+    [CascadingParameter(Name = nameof(TopLevel))]
     public TopLevelObjects TopLevel { get; set; }
 
     private string IconSize = "font-size: xx-large;";
@@ -151,14 +151,10 @@
     private void ToggleHovering_Ignore() => hoveringIgnore = !hoveringIgnore;
     private void ToggleHovering_Block() => hoveringBlock = !hoveringBlock;
 
-    private Task Wait()
-    {
-        return Task.Run(() => System.Threading.Thread.Sleep(500));
-    }
 
     private void RemoveFromTopLevelList()
     {
-        TopLevel.WaitingRequestIds.Remove(friend.Id);
+        TopLevel.AlreadyPushedRequestIds.Remove(friend.Id);
     }
 
     private async Task AcceptRequest()
@@ -169,8 +165,6 @@
         }
         BlockInput = true;
         ShowSpinner = 0;
-
-        await Wait();
 
         // create a shared secret and send our key bundle to the other party so we can chat
         await bundleProcessor.CreateSecretAndSendBundle(Id, friend.Id);
@@ -208,8 +202,6 @@
         BlockInput = true;
         ShowSpinner = 1;
 
-        await Wait();
-
         // remove their encryption key bundle from our bundle list since we aren't going to use it
         await bundleHandler.RemoveBundle(Id, friend.Id);
 
@@ -237,8 +229,6 @@
 
         BlockInput = true;
         ShowSpinner = 2;
-
-        await Wait();
 
         // remove their encryption key bundle from our bundle list since we aren't going to use it
         await bundleHandler.RemoveBundle(Id, friend.Id);
