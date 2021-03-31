@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using Dingo.Data.GeneralModels;
@@ -51,10 +50,20 @@ namespace Dingo
         public Func<Task> GetFriendRequests { get; set; }
 
         /// <summary>
+        /// The list of friends that have unread messages for the user, auto-updates
+        /// </summary>
+        public List<IFriendModel> Messages { get; set; } = new();
+
+        /// <summary>
+        /// Force updates the Messages
+        /// </summary>
+        public Func<Task> GetMessages { get; set; }
+
+        /// <summary>
         /// List of notifications that have been already sent to the user
         /// </summary>
 
-        public List<string> AlreadyPushedMessageIds { get; set; } = new();
+        public ConcurrentDictionary<string, int> AlreadyPushedMessageIds { get; set; } = new();
 
         /// <summary>
         /// List of toasts already pushed to the user for the given ids

@@ -1,8 +1,11 @@
 ﻿@inherits LayoutComponentBase
 
+@inject ILogger<MainLayout> logger
+
 @inject IDisplayNameHandler nameHandler
 @inject IStatusHandler statusHandler
 @inject IFriendHandler friendHandler
+@inject IMessageHandler messageHandler
 
 @using DingoDataAccess.Models.Friends
 
@@ -133,6 +136,11 @@
 
         // make sure other objects can force-check for friends
         TopLevel.GetFriends = GetFriends;
+
+        await TopLevel.AddTimer(15_000, async () => await GetWaitingMessages(), nameof(Dingo.Pages.Messaging.NavMessages));
+
+        // make sure to allow components the ability to force refresh the waiting messages
+        TopLevel.GetMessages = GetWaitingMessages;
     }
 
     /// <summary>
@@ -182,5 +190,73 @@
     private async Task GetFriends()
     {
         TopLevel.Friends = await friendHandler.GetFriendList(Id);
+    }
+
+    /// <summary>
+    /// Retrieves unread messages from server and sends notifications when they are received and adds their buttons into the nav bar
+    /// </summary>
+    /// <returns></returns>
+    private async Task GetWaitingMessages()
+    {
+        // get the list of actual messages that have been sent to me
+        List<IMessageModel> waitingMessages = await messageHandler.GetMessages(Id);
+
+        // if there are none then do nothing
+        if (waitingMessages?.Count is null or 0)
+        {
+            // if there are no waiting messages then we can clear the lists that hold information that prevents us of pushing notifications
+
+            // allow us to send notifications
+            await TopLevel.AlreadyPushedMessageIds.Clear();
+
+            // allow us to remove notifications
+            TopLevel.Messages.Clear();
+
+            return;
+        }
+
+        async Task SendNotification(string Id, DateTime sent, int numberOfMessages)
+        {
+            // set the number of messages
+            await TopLevel.AlreadyPushedMessageIds.Add(Id, numberOfMessages);
+
+            // send the notificaiton to the user
+            var friend = await friendHandler.GetFriend(Id);
+
+            // add the friend the the message list so they're information is displayed in the nav bar
+            if (TopLevel.Messages.Contains(friend) is false)
+            {
+                TopLevel.Messages.Add(friend);
+            }
+
+            // send a toast the the user to notifiy them of the incoming message
+            TopLevel.toasts.Add(new Data.GeneralModels.ToastModel()
+            {
+                Content = $"{friend.DisplayName}#{friend.UniqueIdentifier} sent you a message.",
+                Title = $"New Message",
+                Timeout = TimeSpan.FromSeconds(10),
+                TimeSent = sent
+            });
+        }
+
+        foreach (var item in waitingMessages)
+        {
+            // get the number of times the person has messaged the user
+            int numberOfMessagesFromThisItem = waitingMessages.Where(x => x.SenderId == item.SenderId).Count();
+
+            // check to see if we have already sent a notification for this person, and if we have check to see how many messages the person has sent, if they have sent additional messages we should still notify the user
+            if (await TopLevel.AlreadyPushedMessageIds.Contains(item.SenderId))
+            {
+                if (numberOfMessagesFromThisItem > TopLevel.AlreadyPushedMessageIds[item.SenderId])
+                {
+                    await SendNotification(item.SenderId, item.TimeSent, numberOfMessagesFromThisItem);
+                }
+            }
+            else
+            {
+                // since we have no sent a notification yet send the user a notification and store the number of messages sent and the id so we dont send any more notifications unless the person sends another message
+                await SendNotification(item.SenderId, item.TimeSent, numberOfMessagesFromThisItem);
+            }
+        }
     }
 }

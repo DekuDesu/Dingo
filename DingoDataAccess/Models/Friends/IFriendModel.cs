@@ -34,5 +34,10 @@ namespace DingoDataAccess.Models.Friends
         /// The 4 digit identifier of the user
         /// </summary>
         short UniqueIdentifier { get; set; }
+
+        /// <summary>
+        /// The Sha256 hash of this persons name and unique id
+        /// </summary>
+        string NameHash { get; set; }
     }
 }
