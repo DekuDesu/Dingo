@@ -175,7 +175,7 @@ namespace Dingo
 
             services.AddTransient<IAvatarHandler, AvatarHandler>();
 
-            services.AddTransient<IConcurrentTimerDictionary, ConcurrentTimerDictionary>();
+            services.AddTransient(typeof(IConcurrentTimerDictionary), typeof(ConcurrentTimerDictionary<Microsoft.Extensions.Logging.ILogger<TopLevelObjects>>));
 
         }
 

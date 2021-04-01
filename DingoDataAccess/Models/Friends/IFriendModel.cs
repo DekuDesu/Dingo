@@ -31,6 +31,11 @@ namespace DingoDataAccess.Models.Friends
         OnlineStatus VirtualStatus { get; set; }
 
         /// <summary>
+        /// The status of the user before they last logged out
+        /// </summary>
+        OnlineStatus LastVirtualStatus { get; set; }
+
+        /// <summary>
         /// The 4 digit identifier of the user
         /// </summary>
         short UniqueIdentifier { get; set; }

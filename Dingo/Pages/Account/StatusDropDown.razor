@@ -54,60 +54,17 @@
         _ => "btn btn-success rounded-start"
     };
 
-    private Task Wait()
-    {
-        return Task.Run(() => System.Threading.Thread.Sleep(100));
-    }
-
     private async Task UpdateStatus(OnlineStatus status)
     {
         Status = status;
-        ShowOnlineStatusDropDown = false;
-        await SetStatuses(status);
-        await Wait();
-    }
 
-    private async Task SetStatuses(OnlineStatus status)
-    {
+        ShowOnlineStatusDropDown = false;
+
         await statusHandler.SetVirtualStatus(Id, status);
-        await statusHandler.SetLastVirtualStatus(Id, status);
     }
 
     private void ToggleDropdown()
     {
         ShowOnlineStatusDropDown = !ShowOnlineStatusDropDown;
     }
-
-
-    protected override async Task OnInitializedAsync()
-    {
-        await base.OnInitializedAsync();
-
-        // update the status box to reflect our online status
-        await UpdateOnlineStatus();
-    }
-
-    private async Task UpdateOnlineStatus()
-    {
-        // update our status box, get the last status we set before our last logout
-        var result = await statusHandler.TryGetLastVirtualStatus(Id);
-
-        // if we successfully got the status set the UI to match
-        if (result.result)
-        {
-            // if we got offline, there's something wrong, set to online
-            if (result.status != OnlineStatus.Offline)
-            {
-                Status = result.status;
-            }
-            else
-            {
-                Status = OnlineStatus.Online;
-            }
-        }
-
-        // update our status to show other people
-        await statusHandler.SetVirtualStatus(Id, result.status);
-    }
-
 }

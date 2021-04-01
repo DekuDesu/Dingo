@@ -12,7 +12,10 @@ namespace DingoDataAccess
     {
         private HashSet<(System.Timers.Timer, (string, U))> ExpirationTimers = new();
 
-        public int DefaultExpirationTime = 30000;
+        /// <summary>
+        /// Set the default expiration of items in the cache in ms, default is 30_000ms (30s)
+        /// </summary>
+        public int DefaultExpirationTime = 30_000;
 
         public QueryCache(ILogger<QueryCache<T, U>> logger)
         {
@@ -24,7 +27,7 @@ namespace DingoDataAccess
         private readonly SemaphoreSlim semaphore = new(1, 1);
         private readonly ILogger<QueryCache<T, U>> logger;
 
-        public int MaxItemsInCache { get; set; } = 1000;
+        public int MaxItemsInCache { get; set; } = 1_000;
 
         public bool Contains(string query, U parameter) => Dict.ContainsKey((query, parameter));
 

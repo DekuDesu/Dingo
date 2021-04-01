@@ -13,7 +13,7 @@ namespace Dingo
     /// <summary>
     /// This holds references to the pertinent objects that are top level
     /// </summary>
-    public class TopLevelObjects : ITopLevelObjects
+    public sealed class TopLevelObjects : ITopLevelObjects
     {
         /// <summary>
         /// When added to displays and consumes the toast
@@ -99,20 +99,29 @@ namespace Dingo
         /// </summary>
         public string CurrentChatId { get; set; } = null;
 
+        public event Action BeforeDispose;
+
+        public ILogger<TopLevelObjects> logger { get; set; }
+
         /// <summary>
         /// Dictionary containing all the timers that are running for this user
         /// </summary>
 
-        private readonly ConcurrentTimerDictionary TimerDict = new();
+        private readonly ConcurrentTimerDictionary<ILogger<TopLevelObjects>> TimerDict;
 
         public TopLevelObjects()
         {
+            TimerDict = new(logger)
+            {
+                VerboseLogging = true
+            };
             // tell all timers added to the timer dict to force-update UI state when they invoke
             TimerDict.OnTimer = StateHasChanged;
         }
 
         public Task<string> AddTimer(int RefreshRate, Func<Task> Callback, string Key = null)
         {
+            TimerDict.logger ??= logger;
             TimerDict.OnTimer = StateHasChanged;
             return TimerDict.AddTimer(RefreshRate, Callback, Key);
         }
@@ -124,6 +133,9 @@ namespace Dingo
 
         public void Dispose()
         {
+            // call the before dispose first to execute any cleanup code like setting the users status to offline ect..
+            BeforeDispose?.Invoke();
+
             // dispose all the timers that are running when this object is disposed
             TimerDict?.Dispose();
         }

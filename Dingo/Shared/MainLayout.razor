@@ -7,6 +7,10 @@
 @inject IFriendHandler friendHandler
 @inject IMessageHandler messageHandler
 
+@inject ILogger<TopLevelObjects> topLevelLogger
+
+@implements IDisposable
+
 @using DingoDataAccess.Models.Friends
 
 <CascadingValue Value=@TopLevel Name=@nameof(TopLevel)>
@@ -40,56 +44,60 @@
     [Parameter]
     public IFriendModel MyFriendInfo { get; set; }
 
-    public readonly TopLevelObjects TopLevel = new();
-
-    [Parameter]
-    public MessageCallbackReference messageCallbackReference { get; set; } = new();
+    public TopLevelObjects TopLevel;
 
     [CascadingParameter]
     protected Task<AuthenticationState> AuthStat { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
+        TopLevel = new() { logger = topLevelLogger };
+
         await base.OnInitializedAsync();
         // only get the id and name if its not passed a param as a component
         // this helps reduce the # of requests to the DB
         // check to see if we need to get the display and id to change the name
         if (AuthStat != null)
         {
-            await SetUserInfo();
+            // the the users Id, DisplayName, and MyFriendInfo
+            await GetUserFriendModel();
 
-            await SetOnlineStatus();
+            // mark the user as online
+            await SetOnline();
         }
 
+        // Assign the state action that should be invoked whenever a component modifies TopLevel properties OR when recurring timers invoke
         TopLevel.StateHasChanged = () => InvokeAsync(() => TopLevelStateChange());
 
+        // Setup the reccurring timers that check for messages, friend requests ect..
         await SetupTimers();
 
-
+        // Setup the event that should set the user to offline when they leave the page
+        TopLevel.BeforeDispose += SetOffline;
     }
 
-    protected override async Task OnParametersSetAsync()
+    private void SetOffline()
     {
-
-
-        await base.OnParametersSetAsync();
+        statusHandler.SetStatus(Id, DingoDataAccess.Enums.OnlineStatus.Offline).Wait();
     }
 
-    private async Task SetOnlineStatus()
+    private async Task SetOnline()
     {
-        var lastStatus = await statusHandler.TryGetLastVirtualStatus(Id);
+        /*
+        there are 3 types of statuses
+            Status
+                Either 0 (offline) or 1 (online)
+                should never be shown to users
 
-        // make sure our virtual status is set before our actual status to avoid notfiying other clients
-        if (lastStatus.result && lastStatus.status != DingoDataAccess.Enums.OnlineStatus.Offline)
-        {
-            if (MyFriendInfo.VirtualStatus != lastStatus.status)
-            {
-                await statusHandler.SetVirtualStatus(Id, lastStatus.status);
-                MyFriendInfo.VirtualStatus = lastStatus.status;
-            }
-        }
+            Virtual Status
+                can be any enum for online status except 0 (offline), 0 wont break anything but we have invisible so use that instead
+                is the ONLY status that should be shown to users
 
-        // set the internal status of the user to online
+            Last Virtual Status
+                deprecated
+        */
+
+        // set the status of the user to online
         await statusHandler.SetStatus(Id, DingoDataAccess.Enums.OnlineStatus.Online);
 
         if (MyFriendInfo != null)
@@ -98,19 +106,19 @@
         }
     }
 
-
-    private async Task SetUserInfo()
+    private async Task GetUserFriendModel()
     {
         // get the auth state from the cascaded param
         var auth = await AuthStat;
 
-        // get the id, it's okay if its null becuase GetDisplayName returns instantly if it's null
+        // get the id, it's okay if its null
         Id = auth?.User?.Claims?.FirstOrDefault()?.Value;
 
-        // get the display name, this should NEVER be null as it's displayed to the user
-        DisplayName = Id is null ? "" : await nameHandler.GetDisplayName(Id) ?? "";
-
+        // Get the profile info for the user
         MyFriendInfo = await friendHandler.GetFriend(Id);
+
+        // set the display name
+        DisplayName = MyFriendInfo?.DisplayName ?? "";
     }
 
     private void TopLevelStateChange()
@@ -125,19 +133,19 @@
     private async Task SetupTimers()
     {
         // get any friends requests peridically
-        await TopLevel.AddTimer(15_000, GetFriendRequests, nameof(Dingo.Pages.Account.Requests.ViewRequests));
+        await TopLevel.AddTimer(10_000, GetFriendRequests, nameof(Dingo.Pages.Account.Requests.ViewRequests));
 
         // make sure to set the override so when the user manually navigates to the request component they can force a refresh without having to wait
         TopLevel.GetFriendRequests = GetFriendRequests;
 
         // update the friends list from the server periodically
 
-        await TopLevel.AddTimer(15_000, async () => await GetFriends(), nameof(Dingo.Pages.Account.Friends.DisplayFriends));
+        await TopLevel.AddTimer(10_000, async () => await GetFriends(), nameof(Dingo.Pages.Account.Friends.DisplayFriends));
 
         // make sure other objects can force-check for friends
         TopLevel.GetFriends = GetFriends;
 
-        await TopLevel.AddTimer(15_000, async () => await GetWaitingMessages(), nameof(Dingo.Pages.Messaging.NavMessages));
+        await TopLevel.AddTimer(10_000, async () => await GetWaitingMessages(), nameof(Dingo.Pages.Messaging.NavMessages));
 
         // make sure to allow components the ability to force refresh the waiting messages
         TopLevel.GetMessages = GetWaitingMessages;
@@ -258,5 +266,12 @@
                 await SendNotification(item.SenderId, item.TimeSent, numberOfMessagesFromThisItem);
             }
         }
+    }
+
+    public void Dispose()
+    {
+        TopLevel.BeforeDispose += () => logger.LogInformation("MainLayout disposing TopLevel");
+        TopLevel?.Dispose();
+        TopLevel = null;
     }
 }
