@@ -166,17 +166,30 @@
         BlockInput = true;
         ShowSpinner = 0;
 
-        // create a shared secret and send our key bundle to the other party so we can chat
-        await bundleProcessor.CreateSecretAndSendBundle(Id, friend.Id);
+        // only modify our special stuff if they aren't already our friends or we may end up borking our encryption keys
+        if (TopLevel.Friends.Where(x => x.Id == friend.Id).Count() == 0)
+        {
 
-        // create secret for other party
-        await bundleProcessor.CreateSecret(friend.Id, Id);
+            // create a shared secret and send our key bundle to the other party so we can chat
+            await bundleProcessor.CreateSecretAndSendBundle(Id, friend.Id);
 
-        // add the other person to our friendslist
-        await friendHandler.AddFriend(Id, friend.Id);
+            // create secret for other party
+            await bundleProcessor.CreateSecret(friend.Id, Id);
 
-        // add us to their friends list
-        await friendHandler.AddFriend(friend.Id, Id);
+            // add the other person to our friendslist
+            await friendHandler.AddFriend(Id, friend.Id);
+
+            // add us to their friends list
+            await friendHandler.AddFriend(friend.Id, Id);
+
+            // push notification to ui
+            TopLevel?.toasts.Add(new()
+            {
+                Title = "Added Friend!",
+                Content = $"Added {friend.DisplayName}#{friend.UniqueIdentifier} to your friends list.",
+                Timeout = TimeSpan.FromSeconds(10)
+            });
+        }
 
         // remove them from our request list
         await friendHandler.RemoveRequest(Id, friend.Id);
@@ -230,6 +243,21 @@
         BlockInput = true;
         ShowSpinner = 2;
 
+        // check if they are in our friends list, if they are we should remove them from our friends list
+        if (TopLevel.Friends.Where(x => x.Id == friend.Id).Count() != 0)
+        {
+            // remove them as friends
+            await friendHandler.RemoveFriend(Id, friend.Id);
+
+            // send notifcation that we removed them from the friends list
+            TopLevel?.toasts.Add(new()
+            {
+                Title = "Removed Friend",
+                Content = $"Removed {friend.DisplayName}#{friend.UniqueIdentifier} from your friends list.",
+                Timeout = TimeSpan.FromSeconds(10)
+            });
+        }
+
         // remove their encryption key bundle from our bundle list since we aren't going to use it
         await bundleHandler.RemoveBundle(Id, friend.Id);
 
@@ -245,6 +273,14 @@
 
         ShowSpinner = -1;
         BlockInput = false;
+
+        // send notification that we blocked them
+        TopLevel?.toasts.Add(new()
+        {
+            Title = "Blocked User",
+            Content = $"Blocked {friend.DisplayName}#{friend.UniqueIdentifier} from sending you requests or messages.",
+            Timeout = TimeSpan.FromSeconds(10)
+        });
 
         // notify our parent component that we have changed and it should re-draw the request list
         TopLevel.StateHasChanged?.Invoke();

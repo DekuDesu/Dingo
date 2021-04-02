@@ -116,6 +116,12 @@
 
     private string GetColor()
     {
+        // check to see if the user is offline
+        if (Friend.Status is OnlineStatus.Offline)
+        {
+            return "color: grey;";
+        }
+
         return Friend.VirtualStatus switch
         {
             OnlineStatus.Offline => "color: grey;",
@@ -167,7 +173,7 @@
         {
             Title = "Report Submitted",
             Content = "Your report has successfully been submitted! Thank you for keeping our community safe!",
-            TimeSent = DateTime.UtcNow
+            Timeout = TimeSpan.FromSeconds(10)
         });
 
         TopLevel.StateHasChanged?.Invoke();

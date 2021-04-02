@@ -51,15 +51,11 @@
     public TopLevelObjects TopLevel;
 
     ManualResetEvent DeadmansLock = new(false);
+
     object timerLock = new();
 
     [CascadingParameter]
     protected Task<AuthenticationState> AuthStat { get; set; }
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        await base.OnAfterRenderAsync(firstRender);
-    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -160,7 +156,7 @@
         Timer.AutoReset = false;
 
         // set how long in-between checks the timer invokes the callback
-        Timer.Interval = 15_000;
+        Timer.Interval = 5_000;
 
         // define the callback
         async void RecurringTimers()
@@ -169,6 +165,9 @@
             await GetFriendRequests();
             await GetFriends();
             await GetWaitingMessages();
+
+            // mark us as online
+            await SetOnline();
 
             // update UI
             TopLevel?.StateHasChanged?.Invoke();
@@ -263,17 +262,18 @@
 
         async Task SendNotification(string Id, DateTime sent, int numberOfMessages)
         {
-            // set the number of messages
-            await TopLevel.AlreadyPushedMessageIds.Add(Id, numberOfMessages);
 
             // send the notificaiton to the user
             var friend = await friendHandler.GetFriend(Id);
 
             // add the friend the the message list so they're information is displayed in the nav bar
-            if (TopLevel.Messages.Contains(friend) is false)
+            if (await TopLevel.AlreadyPushedMessageIds.Contains(Id) is false)
             {
                 TopLevel.Messages.Add(friend);
             }
+
+            // set the number of messages
+            await TopLevel.AlreadyPushedMessageIds.Add(Id, numberOfMessages);
 
             // send a toast the the user to notifiy them of the incoming message
             TopLevel.toasts.Add(new Data.GeneralModels.ToastModel()

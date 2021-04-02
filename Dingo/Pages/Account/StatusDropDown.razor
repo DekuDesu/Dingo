@@ -54,6 +54,13 @@
         _ => "btn btn-success rounded-start"
     };
 
+    protected override async Task OnInitializedAsync()
+    {
+        (_, Status) = await statusHandler.TryGetVirtualStatus(Id);
+
+        await base.OnInitializedAsync();
+    }
+
     private async Task UpdateStatus(OnlineStatus status)
     {
         Status = status;

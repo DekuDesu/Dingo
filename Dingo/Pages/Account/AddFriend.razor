@@ -47,6 +47,9 @@
     [CascadingParameter]
     protected Task<AuthenticationState> AuthStat { get; set; }
 
+    [CascadingParameter(Name = nameof(TopLevel))]
+    public TopLevelObjects TopLevel { get; set; }
+
     private string SpinnerStyle = "display: none";
 
     private string ButtonText = "Search";
@@ -88,11 +91,6 @@
     private DisplayNameModel displayName = new();
 
     private List<FluentValidation.Results.ValidationFailure> SearchTermValidationFailures;
-
-    protected override async Task OnInitializedAsync()
-    {
-        await base.OnInitializedAsync();
-    }
 
     private void UpdateButton(string text, ButtonState state = ButtonState.normal, bool spinner = false)
     {
@@ -168,6 +166,15 @@
 
             // update the GUI to reflect the completed process
             UpdateButton(SentText[rng.Next(0, SentText.Length)], ButtonState.completed, false);
+
+            TopLevel.toasts.Add(new()
+            {
+                Title = "Friend Request Sent!",
+                Content = $"Friend request sent to {displayName.DisplayName}",
+                Timeout = TimeSpan.FromSeconds(10)
+            });
+
+            TopLevel.StateHasChanged?.Invoke();
         }
         else
         {

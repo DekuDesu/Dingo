@@ -92,7 +92,7 @@
         await base.OnInitializedAsync();
     }
 
-    private void HideChat()
+    private async Task HideChat()
     {
 
         collapseNavMenu = true;
@@ -102,6 +102,9 @@
             TopLevel.CurrentChatId = null;
             TopLevel.ShowChatInterface = false;
             TopLevel.StateHasChanged();
+
+            // make sure to update out friends when returning to the friends screen, if we dont all friends will show offline until the next check
+            await TopLevel?.GetFriends();
         }
     }
 

@@ -5,6 +5,8 @@
 @using DingoDataAccess.Models.Friends
 @using DingoAuthentication.Encryption
 
+@using DingoDataAccess.Timers
+
 @inject IJSRuntime js
 
 @inject IMessageHandler messageHandler
@@ -13,6 +15,10 @@
 @inject IEncryptionClient<EncryptedDataModel, SignedKeyModel> encryptionClient
 @inject IEncryptedClientStateHandler clientStateHandler
 @inject IKeyAndBundleHandler<KeyBundleModel<SignedKeyModel>, SignedKeyModel> bundleHandler
+
+@inject IAsyncTimer Timer
+
+@using System.Threading;
 
 @implements IDisposable
 <style type="text/css">
@@ -180,7 +186,36 @@
 
     private int RefreshPollingRate = 5_000;
 
-    private System.Timers.Timer RefreshTimer = new();
+    private object LockingObject = new object();
+    private ManualResetEvent DeadmansLock = new(false);
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+
+        // make sure we load the encryption state so we can communicate
+
+        await LoadEncryptionClient();
+
+        await LoadMessages();
+
+        Timer.DeadmansLock = DeadmansLock;
+        Timer.TimerLock = LockingObject;
+
+        async void TimerCallback()
+        {
+            await LoadMessages();
+            Timer.Start();
+        }
+
+        Timer.Interval = RefreshPollingRate;
+
+        Timer.Elapsed(TimerCallback);
+
+        Timer.AutoReset = false;
+
+    }
 
     // ENCRYPTION METHODS
 
@@ -276,6 +311,7 @@
 
     // END ENCRYPTION METHODS
 
+    // UI METHODS
     private async Task ScrollToBottomOfChatbox()
     {
         await js.InvokeVoidAsync("scrollToBottom", ChatBox);
@@ -338,24 +374,6 @@
         BlockInput = false;
     }
 
-    protected override async Task OnInitializedAsync()
-    {
-        await base.OnInitializedAsync();
-
-        logger.LogInformation("Initialized Component {ComponentName} Params: {Param1}:{Param1Value} {Param2}:{Param2Value}", nameof(Message), nameof(Id), Id, nameof(MyFriendInfo), MyFriendInfo);
-
-        // make sure we load the encryption state so we can communicate
-
-        await LoadEncryptionClient();
-
-        await LoadMessages();
-
-        RefreshTimer.Interval = RefreshPollingRate;
-        RefreshTimer.Elapsed += async (x, y) => await LoadMessages();
-        RefreshTimer.AutoReset = true;
-        RefreshTimer.Start();
-    }
-
     private async Task LoadMessages()
     {
         // this retrieves the messages for the person we are messaging, this also permenantly deletes those messages from the database, once the messages leave memory they are gone forever
@@ -387,6 +405,17 @@
         await InvokeAsync(() => StateHasChanged());
     }
 
+    // END UI METHODS
+
+    public void Dispose()
+    {
+        DeadmansLock?.Set();
+        Timer?.Stop();
+        Timer?.Dispose();
+    }
+
+    // COUPLED CLASSES
+
     private class FormModel
     {
         public string Value { get; set; }
@@ -403,10 +432,5 @@
         public bool AvatarIsFriends { get; set; } = false;
     }
 
-    public void Dispose()
-    {
-        RefreshTimer?.Stop();
-        RefreshTimer?.Close();
-        RefreshTimer?.Dispose();
-    }
+    // END COUPLED CLASSES
 }
