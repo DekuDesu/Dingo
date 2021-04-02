@@ -16,6 +16,7 @@ namespace DingoDataAccess.Account
         private readonly ILogger<FriendHandler<TFriendModelType>> logger;
         private readonly IFriendListHandler friendListHandler;
         private readonly IAvatarHandler avatarHandler;
+
         private static QueryCache<TFriendModelType, dynamic> Cache;
 
         private const string DatabaseConnectionName = "DingoUsersConnection";
@@ -30,6 +31,7 @@ namespace DingoDataAccess.Account
             avatarHandler = _avatarHandler;
             this.db.ConnectionStringName = DatabaseConnectionName;
             Cache = new(cacheLogger);
+            Cache.DefaultExpirationTime = 2_000;
         }
 
         public Task<List<IFriendModel>> GetBlocked(string Id) => GetFriendModelList(Id, friendListHandler.GetBlockedIds);

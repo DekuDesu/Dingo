@@ -5,7 +5,6 @@
 @using DingoDataAccess.Enums
 
 @inject ILogger<NavMenu> logger
-@implements IDisposable
 @inject IStatusHandler statusHandler
 
 <div class="top-row pl-4 navbar navbar-dark">
@@ -122,12 +121,5 @@
     {
         TopLevel.ShowChangeDisplayName = true;
         TopLevel.StateHasChanged();
-    }
-
-    public void Dispose()
-    {
-        // make it so when the user closes the tab and the nav menu is disposed log them out
-        statusHandler.SetVirtualStatus(Id, OnlineStatus.Offline);
-        statusHandler.SetStatus(Id, OnlineStatus.Offline);
     }
 }

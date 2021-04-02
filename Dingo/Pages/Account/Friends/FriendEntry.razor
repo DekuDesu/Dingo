@@ -95,6 +95,13 @@
 
     private string GetStatusName()
     {
+        // check to see if the user is offline
+        if (Friend.Status is OnlineStatus.Offline)
+        {
+            return "Offline";
+        }
+
+        // if the user isn't offline then show their selected status
         return Friend.VirtualStatus switch
         {
             OnlineStatus.Offline => "Offline",
@@ -121,11 +128,6 @@
         };
     }
 
-    private Task Wait()
-    {
-        return Task.Run(() => System.Threading.Thread.Sleep(100));
-    }
-
     private void RemoveWithModal()
     {
         ShowRemoveModal = true;
@@ -146,9 +148,7 @@
 
         ShowReportModal = false;
 
-        await Wait();
-
-        logger.LogInformation("Cancelling");
+        await Dingo.Helpers.Sleep(100);
 
         blockInput = false;
     }
@@ -161,7 +161,7 @@
         }
         blockInput = true;
 
-        await Wait();
+        await Dingo.Helpers.Sleep(100);
 
         TopLevel.toasts.Add(new()
         {
@@ -181,6 +181,7 @@
         {
             return;
         }
+
         blockInput = true;
 
         // delete any keys that they have for each other
@@ -197,9 +198,22 @@
 
         TopLevel.Friends.Remove(Friend);
 
+        // push notification to UI to show user that process suceeded
+        ShowRemovedFriendToast();
+
         // update UI
         TopLevel.StateHasChanged();
 
         blockInput = false;
+    }
+
+    private void ShowRemovedFriendToast()
+    {
+        TopLevel.toasts.Add(new()
+        {
+            Title = "Removed Friend",
+            Timeout = TimeSpan.FromSeconds(10),
+            Content = $"Removed {Friend.DisplayName}#{Friend.UniqueIdentifier} from friends list."
+        });
     }
 }

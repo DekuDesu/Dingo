@@ -1,82 +1,137 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using DingoDataAccess.Timers;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Timers;
 
 namespace DingoDataAccess
 {
-    public class ConcurrentTimerDictionary : IDisposable, IConcurrentTimerDictionary
+    public sealed class ConcurrentTimerDictionary<T> : IDisposable, IConcurrentTimerDictionary where T : ILogger
     {
 
-        private readonly Dictionary<string, System.Timers.Timer> Timers = new();
+        private readonly Dictionary<string, AsyncTimer> Timers = new();
 
-        private readonly SemaphoreSlim Limiter = new(1, 1);
+        private readonly SemaphoreSlim DictionaryLimiter = new(1, 1);
+
+        public object LockingObject { get; set; } = new object();
+
+        public ManualResetEvent DeadmansLock { get; set; } = new(false);
+
+        public bool VerboseLogging { get; set; } = false;
+
+        public T logger { get; set; }
+
+        private bool disposed = false;
+
+        public ConcurrentTimerDictionary(T _logger)
+        {
+            logger = _logger;
+            if (VerboseLogging)
+            {
+                logger?.LogInformation("Created {ObjectName}", nameof(ConcurrentTimerDictionary<T>));
+            }
+        }
+
+        public ConcurrentTimerDictionary()
+        {
+
+        }
 
         public Action OnTimer { get; set; }
 
         public async Task<string> AddTimer(int RefreshRate, Func<Task> Callback, string Key = null)
         {
             // create a new timer that will periodilcally invoke the provided action
-            var timer = new System.Timers.Timer()
+            var timer = new AsyncTimer()
             {
                 Interval = RefreshRate,
-                AutoReset = true,
-                Enabled = true
+                AutoReset = false,
+                DeadmansLock = DeadmansLock,
+                TimerLock = LockingObject
             };
 
-            timer.Elapsed += async (x, y) => await Callback?.Invoke();
-
-            timer.Elapsed += (x, y) => OnTimer();
+            // build the event
+            timer.Elapsed(() =>
+            {
+                Callback();
+                if (!disposed)
+                {
+                    timer.Start();
+                }
+            });
 
             string Id = Key ?? Guid.NewGuid().ToString();
 
-            await Limiter.WaitAsync();
+            // add the timer to the dict
+
+            // wait for dict to be free
+            await DictionaryLimiter.WaitAsync();
 
             if (Timers.ContainsKey(Id) is false)
             {
                 Timers.Add(Id, timer);
             }
 
-            Limiter.Release();
+            // free the dict so others can use it
+            DictionaryLimiter.Release();
 
+            // start the timer
             timer.Start();
+
+            if (VerboseLogging)
+            {
+                logger?.LogInformation("Timer Started ({Id}) Total: ({Total})", Id, Timers.Count);
+            }
 
             return Id;
         }
 
         public async Task RemoveTimer(string Id)
         {
-            await Limiter.WaitAsync();
+            await DictionaryLimiter.WaitAsync();
 
             if (Timers.ContainsKey(Id))
             {
                 var timer = Timers[Id];
 
-                timer.Stop();
-                timer.Close();
-                timer.Dispose();
+                timer?.Stop();
+                timer?.Dispose();
 
-                Timers.Remove(Id);
+                Timers?.Remove(Id);
             }
 
-            Limiter.Release();
+            DictionaryLimiter.Release();
+
+            if (VerboseLogging)
+            {
+                logger?.LogInformation("Timer Removed ({Id}) Total: ({Total})", Id, Timers.Count);
+            }
         }
 
         public void Dispose()
         {
-            Limiter.Wait();
+            disposed = true;
+            // force the dictionary to wait
+            DictionaryLimiter?.Wait();
 
-            foreach (var item in Timers.Values)
+            foreach (var item in Timers)
             {
-                item.Stop();
-                item.Close();
-                item.Dispose();
+                if (VerboseLogging)
+                {
+                    logger?.LogInformation("Timer Disposed ({Id}) Total: ({Total})", item.Key, Timers.Count);
+                }
+
+                item.Value.Stop();
+                item.Value.Dispose();
             }
 
-            Limiter.Release();
+            Timers.Clear();
+
+            DictionaryLimiter.Release();
         }
     }
 }

@@ -29,6 +29,7 @@ using Dingo.Data.UserInfo;
 using Microsoft.AspNetCore.Components.Server.Circuits;
 using DingoDataAccess.OAuth;
 using DingoAuthentication.Encryption;
+using DingoDataAccess.Timers;
 
 namespace Dingo
 {
@@ -175,8 +176,9 @@ namespace Dingo
 
             services.AddTransient<IAvatarHandler, AvatarHandler>();
 
-            services.AddTransient<IConcurrentTimerDictionary, ConcurrentTimerDictionary>();
+            services.AddTransient(typeof(IConcurrentTimerDictionary), typeof(ConcurrentTimerDictionary<Microsoft.Extensions.Logging.ILogger<TopLevelObjects>>));
 
+            services.AddTransient<IAsyncTimer, AsyncTimer>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

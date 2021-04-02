@@ -22,6 +22,8 @@ namespace DingoDataAccess.Models.Friends
 
         public OnlineStatus VirtualStatus { get; set; }
 
+        public OnlineStatus LastVirtualStatus { get; set; }
+
         public short UniqueIdentifier { get; set; }
 
         public string NameHash { get; set; }
