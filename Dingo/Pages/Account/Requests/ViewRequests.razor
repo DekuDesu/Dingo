@@ -4,8 +4,6 @@
 @inject IFriendListHandler friendlistHandler
 @inject IFriendHandler friendHandler
 
-@implements IDisposable
-
 <table class="table table-striped border rounded table-hover">
     <tbody>
         @if (TopLevel.FriendRequests.Count == 0)
@@ -49,14 +47,8 @@
 
     protected override async Task OnInitializedAsync()
     {
-        await TopLevel?.GetFriendRequests?.Invoke();
-
         await base.OnInitializedAsync();
-    }
 
-    public void Dispose()
-    {
-        // when index is diposed it will dispose this timer automatically
-        //TopLevel.RemoveTimer(nameof(ViewRequests)).Wait();
+        await TopLevel?.GetFriendRequests?.Invoke();
     }
 }

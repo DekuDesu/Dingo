@@ -24,11 +24,23 @@
                 <div class="sidebar">
                     <NavMenu />
                 </div>
-                <div class="main">
-                    <div class="content px-4">
-                        @Body
-                    </div>
-                </div>
+                <AuthorizeView>
+                    <Authorized>
+                        <div class="main">
+                            <div class="content px-4">
+                                @Body
+                            </div>
+                        </div>
+                    </Authorized>
+                    <NotAuthorized>
+                        <div class="main">
+                            <div class="content px-4">
+                                @Body
+                            </div>
+                        </div>
+                    </NotAuthorized>
+                </AuthorizeView>
+
                 <Dingo.Pages.Components.Toasts />
                 <Dingo.Pages.Components.Modals />
                 <Dingo.Pages.Account.ChangeAvatar />
@@ -51,15 +63,13 @@
     public TopLevelObjects TopLevel;
 
     ManualResetEvent DeadmansLock = new(false);
+
+    bool authExists = false;
+
     object timerLock = new();
 
     [CascadingParameter]
     protected Task<AuthenticationState> AuthStat { get; set; }
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        await base.OnAfterRenderAsync(firstRender);
-    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -73,18 +83,25 @@
             // the the users Id, DisplayName, and MyFriendInfo
             await GetUserFriendModel();
 
-            // mark the user as online
-            await SetOnline();
+            // make sure we're not starting a timer that will garuntee fail it's results
+            if (authExists)
+            {
+
+                // mark the user as online
+                await SetOnline();
+
+                // Assign the state action that should be invoked whenever a component modifies TopLevel properties OR when recurring timers invoke
+                TopLevel.StateHasChanged = () => InvokeAsync(() => TopLevelStateChange());
+
+                // Setup the reccurring timers that check for messages, friend requests ect..
+                SetupTimers();
+
+                // Setup the event that should set the user to offline when they leave the page
+                TopLevel.BeforeDispose += SetOffline;
+            }
+
         }
 
-        // Assign the state action that should be invoked whenever a component modifies TopLevel properties OR when recurring timers invoke
-        TopLevel.StateHasChanged = () => InvokeAsync(() => TopLevelStateChange());
-
-        // Setup the reccurring timers that check for messages, friend requests ect..
-        SetupTimers();
-
-        // Setup the event that should set the user to offline when they leave the page
-        TopLevel.BeforeDispose += SetOffline;
 
         await base.OnInitializedAsync();
     }
@@ -127,6 +144,11 @@
         // get the id, it's okay if its null
         Id = auth?.User?.Claims?.FirstOrDefault()?.Value;
 
+        if (Id != null)
+        {
+            authExists = true;
+        }
+
         // Get the profile info for the user
         MyFriendInfo = await friendHandler.GetFriend(Id);
 
@@ -160,7 +182,7 @@
         Timer.AutoReset = false;
 
         // set how long in-between checks the timer invokes the callback
-        Timer.Interval = 15_000;
+        Timer.Interval = 5_000;
 
         // define the callback
         async void RecurringTimers()
@@ -169,6 +191,9 @@
             await GetFriendRequests();
             await GetFriends();
             await GetWaitingMessages();
+
+            // mark us as online
+            await SetOnline();
 
             // update UI
             TopLevel?.StateHasChanged?.Invoke();
@@ -263,17 +288,18 @@
 
         async Task SendNotification(string Id, DateTime sent, int numberOfMessages)
         {
-            // set the number of messages
-            await TopLevel.AlreadyPushedMessageIds.Add(Id, numberOfMessages);
 
             // send the notificaiton to the user
             var friend = await friendHandler.GetFriend(Id);
 
             // add the friend the the message list so they're information is displayed in the nav bar
-            if (TopLevel.Messages.Contains(friend) is false)
+            if (await TopLevel.AlreadyPushedMessageIds.Contains(Id) is false)
             {
                 TopLevel.Messages.Add(friend);
             }
+
+            // set the number of messages
+            await TopLevel.AlreadyPushedMessageIds.Add(Id, numberOfMessages);
 
             // send a toast the the user to notifiy them of the incoming message
             TopLevel.toasts.Add(new Data.GeneralModels.ToastModel()
