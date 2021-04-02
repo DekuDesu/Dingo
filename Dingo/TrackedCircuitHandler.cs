@@ -24,15 +24,18 @@ namespace Dingo
             {
                 Ids.Remove(circuit.Id);
             }
+
             logger.LogInformation("Circuit closed {CircuitId}, total circuits {CircuitCount}", circuit.Id, Ids.Count);
+
             return base.OnCircuitClosedAsync(circuit, cancellationToken);
         }
-        public override Task OnCircuitOpenedAsync(Circuit circuit, CancellationToken cancellationToken)
+        public override async Task OnCircuitOpenedAsync(Circuit circuit, CancellationToken cancellationToken)
         {
             logger.LogInformation("Circuit opened {CircuitId}", circuit.Id);
-            Ids.Add(circuit.Id);
+
             logger.LogInformation("Circuit opened {CircuitId}, total circuits {CircuitCount}", circuit.Id, Ids.Count);
-            return base.OnCircuitOpenedAsync(circuit, cancellationToken);
+
+            await base.OnCircuitOpenedAsync(circuit, cancellationToken);
         }
         public override Task OnConnectionDownAsync(Circuit circuit, CancellationToken cancellationToken)
         {

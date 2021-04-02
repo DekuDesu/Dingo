@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using DingoDataAccess.Timers;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,15 +13,19 @@ namespace DingoDataAccess
     public sealed class ConcurrentTimerDictionary<T> : IDisposable, IConcurrentTimerDictionary where T : ILogger
     {
 
-        private readonly Dictionary<string, System.Timers.Timer> Timers = new();
+        private readonly Dictionary<string, AsyncTimer> Timers = new();
 
         private readonly SemaphoreSlim DictionaryLimiter = new(1, 1);
+
+        public object LockingObject { get; set; } = new object();
+
+        public ManualResetEvent DeadmansLock { get; set; } = new(false);
 
         public bool VerboseLogging { get; set; } = false;
 
         public T logger { get; set; }
 
-        private readonly SemaphoreSlim TimerLimiter = new(1, 1);
+        private bool disposed = false;
 
         public ConcurrentTimerDictionary(T _logger)
         {
@@ -41,39 +46,23 @@ namespace DingoDataAccess
         public async Task<string> AddTimer(int RefreshRate, Func<Task> Callback, string Key = null)
         {
             // create a new timer that will periodilcally invoke the provided action
-            var timer = new System.Timers.Timer()
+            var timer = new AsyncTimer()
             {
                 Interval = RefreshRate,
-                AutoReset = true,
-                Enabled = true
+                AutoReset = false,
+                DeadmansLock = DeadmansLock,
+                TimerLock = LockingObject
             };
 
             // build the event
-            ElapsedEventHandler newEvent = async (x, y) =>
+            timer.Elapsed(() =>
             {
-                // since these timers like to continue on after we have disposed them so we have to try to prevent race conditions from duplicating calls for ghost users
-
-                // lock ALL timers
-                if (await TimerLimiter?.WaitAsync(5))
+                Callback();
+                if (!disposed)
                 {
-                    Callback?.Invoke();
-
-                    // allow other timers to invoke
-                    TimerLimiter.Release();
+                    timer.Start();
                 }
-                else
-                {
-                    if (VerboseLogging)
-                    {
-                        logger?.LogInformation("Deadmans Encountered Exiting ({Id})", Key);
-                    }
-                    timer?.Stop();
-                    timer?.Dispose();
-                }
-            };
-
-            // assign the event so it can be called recurrently
-            timer.Elapsed += newEvent;
+            });
 
             string Id = Key ?? Guid.NewGuid().ToString();
 
@@ -125,11 +114,9 @@ namespace DingoDataAccess
 
         public void Dispose()
         {
+            disposed = true;
             // force the dictionary to wait
             DictionaryLimiter?.Wait();
-
-            // force all the timers to wait on their events
-            TimerLimiter?.Wait();
 
             foreach (var item in Timers)
             {
@@ -144,13 +131,7 @@ namespace DingoDataAccess
 
             Timers.Clear();
 
-            if (VerboseLogging)
-            {
-                logger?.LogInformation("Disposed Timer Dict Total: ({Total})", Timers.Count);
-            }
             DictionaryLimiter.Release();
-            TimerLimiter?.Release();
-            // TimerLimiter intentionally not released to force timers on other threads to exit
         }
     }
 }

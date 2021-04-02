@@ -101,43 +101,10 @@ namespace Dingo
 
         public event Action BeforeDispose;
 
-        public ILogger<TopLevelObjects> logger { get; set; }
-
-        /// <summary>
-        /// Dictionary containing all the timers that are running for this user
-        /// </summary>
-
-        private readonly ConcurrentTimerDictionary<ILogger<TopLevelObjects>> TimerDict;
-
-        public TopLevelObjects()
-        {
-            TimerDict = new(logger)
-            {
-                VerboseLogging = true
-            };
-            // tell all timers added to the timer dict to force-update UI state when they invoke
-            TimerDict.OnTimer = StateHasChanged;
-        }
-
-        public Task<string> AddTimer(int RefreshRate, Func<Task> Callback, string Key = null)
-        {
-            TimerDict.logger ??= logger;
-            TimerDict.OnTimer = StateHasChanged;
-            return TimerDict.AddTimer(RefreshRate, Callback, Key);
-        }
-
-        public Task RemoveTimer(string Key)
-        {
-            return TimerDict.RemoveTimer(Key);
-        }
-
         public void Dispose()
         {
             // call the before dispose first to execute any cleanup code like setting the users status to offline ect..
             BeforeDispose?.Invoke();
-
-            // dispose all the timers that are running when this object is disposed
-            TimerDict?.Dispose();
         }
     }
 }

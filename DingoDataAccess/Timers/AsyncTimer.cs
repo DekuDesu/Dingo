@@ -9,13 +9,19 @@ using System.Timers;
 
 namespace DingoDataAccess.Timers
 {
-    public class AsyncTimer : IDisposable
+    public class AsyncTimer : IDisposable, IAsyncTimer
     {
-        private readonly System.Timers.Timer Timer = new();
-        private readonly ILogger<AsyncTimer> logger;
+        private readonly System.Timers.Timer Timer = new() { Enabled = true };
 
-        private readonly object TimerLock = new();
-        private readonly ManualResetEvent DeadmansLock = new(false);
+        /// <summary>
+        /// This is to ensure only one lock can perform operations at a time, if this object is not set this timer will continue to invoke on background threads after it's been disposed
+        /// </summary>
+        public object TimerLock { get; set; } = new();
+
+        /// <summary>
+        /// This ensures that once this lock as been set that the timer does not invoke any callbacks that may affect things after it's been disposed. If this is not set further invocations may happen on background threads
+        /// </summary>
+        public ManualResetEvent DeadmansLock { get; set; } = new(true);
 
         public double Interval
         {
@@ -29,20 +35,35 @@ namespace DingoDataAccess.Timers
             set { Timer.AutoReset = value; }
         }
 
-        public AsyncTimer(ILogger<AsyncTimer> _logger)
+        public void Elapsed(Action onElapsed)
         {
-            logger = _logger;
+            lock (TimerLock)
+            {
+                Timer.Elapsed += CreateElapsedEvent(onElapsed);
+            }
         }
 
-        public void Elapsed(ElapsedEventHandler newEvent)
+        private ElapsedEventHandler CreateElapsedEvent(Action onElapsed)
         {
-            Timer.Elapsed += newEvent;
+            return (x, y) =>
+            {
+                lock (TimerLock)
+                {
+                    if (DeadmansLock.WaitOne(0))
+                    {
+                        return;
+                    }
+                    onElapsed?.Invoke();
+                }
+            };
+
         }
 
         public void Start()
         {
             lock (TimerLock)
             {
+                DeadmansLock.Reset();
                 Timer?.Start();
             }
         }
@@ -51,6 +72,7 @@ namespace DingoDataAccess.Timers
         {
             lock (TimerLock)
             {
+                DeadmansLock.Set();
                 Timer?.Stop();
             }
         }

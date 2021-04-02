@@ -9,9 +9,13 @@
 
 @inject ILogger<TopLevelObjects> topLevelLogger
 
+@inject IAsyncTimer Timer
+
 @implements IDisposable
 
 @using DingoDataAccess.Models.Friends
+@using DingoDataAccess.Timers
+@using System.Threading
 
 <CascadingValue Value=@TopLevel Name=@nameof(TopLevel)>
     <CascadingValue Value=@Id Name=@nameof(Id)>
@@ -46,14 +50,21 @@
 
     public TopLevelObjects TopLevel;
 
+    ManualResetEvent DeadmansLock = new(false);
+    object timerLock = new();
+
     [CascadingParameter]
     protected Task<AuthenticationState> AuthStat { get; set; }
 
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await base.OnAfterRenderAsync(firstRender);
+    }
+
     protected override async Task OnInitializedAsync()
     {
-        TopLevel = new() { logger = topLevelLogger };
+        TopLevel = new();
 
-        await base.OnInitializedAsync();
         // only get the id and name if its not passed a param as a component
         // this helps reduce the # of requests to the DB
         // check to see if we need to get the display and id to change the name
@@ -70,10 +81,12 @@
         TopLevel.StateHasChanged = () => InvokeAsync(() => TopLevelStateChange());
 
         // Setup the reccurring timers that check for messages, friend requests ect..
-        await SetupTimers();
+        SetupTimers();
 
         // Setup the event that should set the user to offline when they leave the page
         TopLevel.BeforeDispose += SetOffline;
+
+        await base.OnInitializedAsync();
     }
 
     private void SetOffline()
@@ -130,25 +143,50 @@
     /// Sets up all the timers that should run periodically for this user
     /// </summary>
     /// <returns></returns>
-    private async Task SetupTimers()
+    private void SetupTimers()
     {
-        // get any friends requests peridically
-        await TopLevel.AddTimer(10_000, GetFriendRequests, nameof(Dingo.Pages.Account.Requests.ViewRequests));
-
         // make sure to set the override so when the user manually navigates to the request component they can force a refresh without having to wait
         TopLevel.GetFriendRequests = GetFriendRequests;
-
-        // update the friends list from the server periodically
-
-        await TopLevel.AddTimer(10_000, async () => await GetFriends(), nameof(Dingo.Pages.Account.Friends.DisplayFriends));
 
         // make sure other objects can force-check for friends
         TopLevel.GetFriends = GetFriends;
 
-        await TopLevel.AddTimer(10_000, async () => await GetWaitingMessages(), nameof(Dingo.Pages.Messaging.NavMessages));
-
         // make sure to allow components the ability to force refresh the waiting messages
         TopLevel.GetMessages = GetWaitingMessages;
+
+        // set up the timer that actually checks for updates for everything
+
+        // make sure the timer does not continue to run if it's callback is not invoked
+        Timer.AutoReset = false;
+
+        // set how long in-between checks the timer invokes the callback
+        Timer.Interval = 15_000;
+
+        // define the callback
+        async void RecurringTimers()
+        {
+            // check for updates
+            await GetFriendRequests();
+            await GetFriends();
+            await GetWaitingMessages();
+
+            // update UI
+            TopLevel?.StateHasChanged?.Invoke();
+            // start another timer
+            Timer.Start();
+        }
+
+        // assign the callback
+        Timer.Elapsed(RecurringTimers);
+
+
+        // assign the locks for the timer, these ensure after this object is disposed those timers can neither invoke their callbacks
+        // or continue invoking their elapsed events
+        Timer.TimerLock = timerLock;
+        Timer.DeadmansLock = DeadmansLock;
+
+        // start the timer
+        Timer.Start();
     }
 
     /// <summary>
@@ -270,8 +308,14 @@
 
     public void Dispose()
     {
-        TopLevel.BeforeDispose += () => logger.LogInformation("MainLayout disposing TopLevel");
+        DeadmansLock?.Set();
+
         TopLevel?.Dispose();
+
+        Timer?.Stop();
+        Timer?.Dispose();
+
+        Timer = null;
         TopLevel = null;
     }
 }
