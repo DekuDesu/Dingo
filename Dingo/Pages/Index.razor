@@ -19,14 +19,19 @@
 }
 
 <AuthorizeView>
-    @if (TopLevel?.ShowChatInterface is true && TopLevel?.CurrentChatId != null)
-    {
-        <Dingo.Pages.Messaging.Message FriendId=@TopLevel.CurrentChatId />
-    }
-    else
-    {
-        <div class="col-lg-6 col-md-10 col-xs-12">
-            <Dingo.Pages.Account.ManageFriends Id=@Id />
-        </div>
-    }
+    <Authorized>
+        @if (TopLevel?.ShowChatInterface is true && TopLevel?.CurrentChatId != null)
+        {
+            <Dingo.Pages.Messaging.Message FriendId=@TopLevel.CurrentChatId />
+        }
+        else
+        {
+            <div class="col-lg-6 col-md-10 col-xs-12">
+                <Dingo.Pages.Account.ManageFriends Id=@Id />
+            </div>
+        }
+    </Authorized>
+    <NotAuthorized>
+        <Welcome />
+    </NotAuthorized>
 </AuthorizeView>

@@ -24,11 +24,23 @@
                 <div class="sidebar">
                     <NavMenu />
                 </div>
-                <div class="main">
-                    <div class="content px-4">
-                        @Body
-                    </div>
-                </div>
+                <AuthorizeView>
+                    <Authorized>
+                        <div class="main">
+                            <div class="content px-4">
+                                @Body
+                            </div>
+                        </div>
+                    </Authorized>
+                    <NotAuthorized>
+                        <div class="main">
+                            <div class="content px-4">
+                                @Body
+                            </div>
+                        </div>
+                    </NotAuthorized>
+                </AuthorizeView>
+
                 <Dingo.Pages.Components.Toasts />
                 <Dingo.Pages.Components.Modals />
                 <Dingo.Pages.Account.ChangeAvatar />
@@ -52,6 +64,8 @@
 
     ManualResetEvent DeadmansLock = new(false);
 
+    bool authExists = false;
+
     object timerLock = new();
 
     [CascadingParameter]
@@ -69,18 +83,25 @@
             // the the users Id, DisplayName, and MyFriendInfo
             await GetUserFriendModel();
 
-            // mark the user as online
-            await SetOnline();
+            // make sure we're not starting a timer that will garuntee fail it's results
+            if (authExists)
+            {
+
+                // mark the user as online
+                await SetOnline();
+
+                // Assign the state action that should be invoked whenever a component modifies TopLevel properties OR when recurring timers invoke
+                TopLevel.StateHasChanged = () => InvokeAsync(() => TopLevelStateChange());
+
+                // Setup the reccurring timers that check for messages, friend requests ect..
+                SetupTimers();
+
+                // Setup the event that should set the user to offline when they leave the page
+                TopLevel.BeforeDispose += SetOffline;
+            }
+
         }
 
-        // Assign the state action that should be invoked whenever a component modifies TopLevel properties OR when recurring timers invoke
-        TopLevel.StateHasChanged = () => InvokeAsync(() => TopLevelStateChange());
-
-        // Setup the reccurring timers that check for messages, friend requests ect..
-        SetupTimers();
-
-        // Setup the event that should set the user to offline when they leave the page
-        TopLevel.BeforeDispose += SetOffline;
 
         await base.OnInitializedAsync();
     }
@@ -122,6 +143,11 @@
 
         // get the id, it's okay if its null
         Id = auth?.User?.Claims?.FirstOrDefault()?.Value;
+
+        if (Id != null)
+        {
+            authExists = true;
+        }
 
         // Get the profile info for the user
         MyFriendInfo = await friendHandler.GetFriend(Id);
