@@ -196,7 +196,8 @@ namespace Dingo
                 app.UseHsts();
             }
 
-            app.UseHttpsRedirection();
+            //app.UseHttpsRedirection();
+
             app.UseStaticFiles();
 
             // make sure the page requests are logged with serilog since we disabled this in the appsettings.json
