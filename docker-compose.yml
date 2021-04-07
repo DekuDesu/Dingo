@@ -1,0 +1,31 @@
+﻿version: "3.7"
+
+services:
+  #build the blazor app using microsoft's docker file
+  web:
+    build: .
+    #bind the ports to the host machine
+    ports:
+      - "8080:80"
+    # link this with mssql in order to access its exposed ports
+    links:
+      - mssql
+    # prevent this container from starting before mssql
+    depends_on:
+      -  mssql
+
+  # set up the db that runs the app
+  mssql:
+    image: mcr.microsoft.com/mssql/server:latest
+    volumes:
+      - ./ImportSQL:/var/opt/mssql/import
+    # expose this port to host for debug puposes
+    ports:
+      - "11433:1434"
+    expose:
+      - "1434/tcp"
+    environment:
+      ACCEPT_EULA: "Y"
+      SA_PASSWORD: "DingoChat5%"
+      MSSQL_PID: "Developer"
+      MSSQL_TCP_PORT: "1434"
