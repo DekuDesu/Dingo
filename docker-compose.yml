@@ -12,20 +12,38 @@ services:
       - mssql
     # prevent this container from starting before mssql
     depends_on:
-      -  mssql
+      - mssql
+    container_name: Dingo-Blazor
+
+  importer:
+    image: mcr.microsoft.com/mssql-tools:latest
+    volumes:
+      - ./ImportSQL:/var/opt/mssql/import
+    links:
+      - mssql
+    depends_on:
+      - mssql
+    container_name: MSSQL-Script-Importer
+    working_dir: /var/opt/mssql/import
+    command: "sh ./AutoImport.sh"
 
   # set up the db that runs the app
   mssql:
     image: mcr.microsoft.com/mssql/server:latest
-    volumes:
-      - ./ImportSQL:/var/opt/mssql/import
     # expose this port to host for debug puposes
     ports:
-      - "11433:1434"
+      - "11433:1433"
+    # use mssql-server,11433(docker) / localhost,11433(other)
     expose:
-      - "1434/tcp"
+      - "1433/tcp"
+    # setup MSSQL
     environment:
       ACCEPT_EULA: "Y"
       SA_PASSWORD: "DingoChat5%"
       MSSQL_PID: "Developer"
-      MSSQL_TCP_PORT: "1434"
+    # visual name for docker-gui
+    container_name: Dingo-MSSQL
+    # for some reason mssql-tools refused to connect to a linked container unless this had a hostname??
+    hostname: mssql-server
+
+  
