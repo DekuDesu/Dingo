@@ -20,17 +20,18 @@
       "workingDirectory": "C:\\_Programming\\Repos\\Dingo\\Dingo",
       "launchBrowser": true,
       "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development"
+        "ASPNETCORE_ENVIRONMENT": "Production"
       },
       "remoteDebugEnabled": false,
       "applicationUrl": "https://localhost:5001;http://localhost:5000"
     },
     "Docker": {
-      "commandName": "Docker",
+      "commandName": "Executable",
+      "executablePath": "C:\\_Programming\\Repos\\Dingo\\RebuildDocker-Compose.bat",
       "launchBrowser": true,
       "launchUrl": "{Scheme}://{ServiceHost}:{ServicePort}",
       "publishAllPorts": true,
-      "useSSL": true
+      "useSSL": false
     }
   }
 }

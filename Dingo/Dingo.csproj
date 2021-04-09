@@ -32,4 +32,8 @@
 		<ProjectReference Include="..\DingoAuthentication\DingoAuthentication.csproj" />
 	</ItemGroup>
 
+	<ItemGroup>
+		<Folder Include="dingosql\" />
+	</ItemGroup>
+
 </Project>
