@@ -7,7 +7,7 @@
 
 @using DingoAuthentication.Encryption
 
-@inject IEncryptedClientStateHandler clientStateHandler
+@*@inject IEncryptedClientStateHandler clientStateHandler*@
 
 <tr scope="row">
     <td class="d-flex justify-content-between">
@@ -190,10 +190,10 @@
 
         blockInput = true;
 
-        // delete any keys that they have for each other
-        await clientStateHandler.DeleteState(Id, Friend.Id);
+        //// delete any keys that they have for each other
+        //await clientStateHandler.DeleteState(Id, Friend.Id);
 
-        await clientStateHandler.DeleteState(Friend.Id, Id);
+        //await clientStateHandler.DeleteState(Friend.Id, Id);
 
         // remove them from the friends list in the database
         await friendHandler.RemoveFriend(Id, Friend.Id);

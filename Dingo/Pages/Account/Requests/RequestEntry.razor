@@ -3,8 +3,8 @@
 
 @using DingoAuthentication.Encryption
 
-@inject IKeyAndBundleHandler<KeyBundleModel<SignedKeyModel>, SignedKeyModel> bundleHandler
-@inject IBundleProcessor bundleProcessor
+@*@inject IKeyAndBundleHandler<KeyBundleModel<SignedKeyModel>, SignedKeyModel> bundleHandler
+    @inject IBundleProcessor bundleProcessor*@
 
 @using DingoDataAccess.Models.Friends
 
@@ -170,11 +170,11 @@
         if (TopLevel.Friends.Where(x => x.Id == friend.Id).Count() == 0)
         {
 
-            // create a shared secret and send our key bundle to the other party so we can chat
-            await bundleProcessor.CreateSecretAndSendBundle(Id, friend.Id);
+            //// create a shared secret and send our key bundle to the other party so we can chat
+            //await bundleProcessor.CreateSecretAndSendBundle(Id, friend.Id);
 
-            // create secret for other party
-            await bundleProcessor.CreateSecret(friend.Id, Id);
+            //// create secret for other party
+            //await bundleProcessor.CreateSecret(friend.Id, Id);
 
             // add the other person to our friendslist
             await friendHandler.AddFriend(Id, friend.Id);
@@ -215,8 +215,8 @@
         BlockInput = true;
         ShowSpinner = 1;
 
-        // remove their encryption key bundle from our bundle list since we aren't going to use it
-        await bundleHandler.RemoveBundle(Id, friend.Id);
+        //// remove their encryption key bundle from our bundle list since we aren't going to use it
+        //await bundleHandler.RemoveBundle(Id, friend.Id);
 
         // remove them from our request list
         await friendHandler.RemoveRequest(Id, friend.Id);
@@ -258,8 +258,8 @@
             });
         }
 
-        // remove their encryption key bundle from our bundle list since we aren't going to use it
-        await bundleHandler.RemoveBundle(Id, friend.Id);
+        //// remove their encryption key bundle from our bundle list since we aren't going to use it
+        //await bundleHandler.RemoveBundle(Id, friend.Id);
 
         await friendHandler.BlockFriend(Id, friend.Id);
 

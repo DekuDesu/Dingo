@@ -149,30 +149,30 @@ namespace Dingo
             // gets and sets the messages between users
             services.AddTransient<IMessageHandler, MessageHandler>();
 
-            services.AddTransient(typeof(ISymmetricHandler<EncryptedDataModel>), typeof(SymmetricHandler<EncryptedDataModel>));
+            //services.AddTransient(typeof(ISymmetricHandler<EncryptedDataModel>), typeof(SymmetricHandler<EncryptedDataModel>));
 
-            services.AddTransient<IDiffieHellmanHandler, DiffieHellmanHandler>();
+            //services.AddTransient<IDiffieHellmanHandler, DiffieHellmanHandler>();
 
-            services.AddTransient<IKeyDerivationFunction, KeyDerivationFunction>();
+            //services.AddTransient<IKeyDerivationFunction, KeyDerivationFunction>();
 
-            services.AddTransient(typeof(IKeyDerivationRatchet<EncryptedDataModel>), typeof(KeyDerivationRatchet<EncryptedDataModel>));
+            //services.AddTransient(typeof(IKeyDerivationRatchet<EncryptedDataModel>), typeof(KeyDerivationRatchet<EncryptedDataModel>));
 
-            services.AddTransient(typeof(IKeyBundleModel<SignedKeyModel>), typeof(KeyBundleModel<SignedKeyModel>));
+            //services.AddTransient(typeof(IKeyBundleModel<SignedKeyModel>), typeof(KeyBundleModel<SignedKeyModel>));
 
-            services.AddTransient<ISignedKeyModel, SignedKeyModel>();
+            //services.AddTransient<ISignedKeyModel, SignedKeyModel>();
 
-            services.AddTransient<ISignatureHandler, SignatureHandler>();
+            //services.AddTransient<ISignatureHandler, SignatureHandler>();
 
-            services.AddTransient<IDiffieHellmanRatchet, DiffieHellmanRatchet>();
+            //services.AddTransient<IDiffieHellmanRatchet, DiffieHellmanRatchet>();
 
             // gets and sets the states for users
-            services.AddTransient<IEncryptedClientStateHandler, EncryptedClientStateHandler>();
+            //services.AddTransient<IEncryptedClientStateHandler, EncryptedClientStateHandler>();
 
-            services.AddTransient(typeof(IKeyAndBundleHandler<KeyBundleModel<SignedKeyModel>, SignedKeyModel>), typeof(KeyAndBundleHandler<KeyBundleModel<SignedKeyModel>, SignedKeyModel>));
+            //services.AddTransient(typeof(IKeyAndBundleHandler<KeyBundleModel<SignedKeyModel>, SignedKeyModel>), typeof(KeyAndBundleHandler<KeyBundleModel<SignedKeyModel>, SignedKeyModel>));
 
-            services.AddTransient(typeof(IEncryptionClient<EncryptedDataModel, SignedKeyModel>), typeof(EncryptionClient<EncryptedDataModel, KeyBundleModel<SignedKeyModel>, SignedKeyModel>));
+            //services.AddTransient(typeof(IEncryptionClient<EncryptedDataModel, SignedKeyModel>), typeof(EncryptionClient<EncryptedDataModel, KeyBundleModel<SignedKeyModel>, SignedKeyModel>));
 
-            services.AddTransient(typeof(IBundleProcessor), typeof(BundleProcessor<KeyBundleModel<SignedKeyModel>, EncryptedDataModel, SignedKeyModel>));
+            //services.AddTransient(typeof(IBundleProcessor), typeof(BundleProcessor<KeyBundleModel<SignedKeyModel>, EncryptedDataModel, SignedKeyModel>));
 
             services.AddTransient<IAvatarHandler, AvatarHandler>();
 
