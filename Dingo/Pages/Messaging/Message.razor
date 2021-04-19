@@ -11,10 +11,9 @@
 
 @inject IMessageHandler messageHandler
 @inject IFriendHandler friendHandler
-
-@inject IEncryptionClient<EncryptedDataModel, SignedKeyModel> encryptionClient
-@inject IEncryptedClientStateHandler clientStateHandler
-@inject IKeyAndBundleHandler<KeyBundleModel<SignedKeyModel>, SignedKeyModel> bundleHandler
+@*@inject IEncryptionClient<EncryptedDataModel, SignedKeyModel> encryptionClient
+    @inject IEncryptedClientStateHandler clientStateHandler
+    @inject IKeyAndBundleHandler<KeyBundleModel<SignedKeyModel>, SignedKeyModel> bundleHandler*@
 
 @inject IAsyncTimer Timer
 
@@ -224,84 +223,112 @@
         // since we are chatting with this person we should already have a state stored to encrypt between us
 
         // get the encryption state for the person we are chatting with
-        var state = await clientStateHandler.GetState(Id, FriendId);
+        //var state = await clientStateHandler.GetState(Id, FriendId);
 
-        if (state != null)
-        {
-            encryptionClient.ImportState(state);
-        }
-        else
-        {
-            logger.LogError("Failed to get encryption state for {Id} for {FriendId}", Id, FriendId);
-        }
+        //if (state != null)
+        //{
+        //    encryptionClient.ImportState(state);
+        //}
+        //else
+        //{
+        //    logger.LogError("Failed to get encryption state for {Id} for {FriendId}", Id, FriendId);
+        //}
     }
 
     private async Task SaveEncryptionState()
     {
-        // export the local state to string
-        string state = encryptionClient.ExportState();
+        //// export the local state to string
+        //string state = encryptionClient.ExportState();
 
-        // ssave the string in the database
-        await clientStateHandler.SetState(Id, FriendId, state);
+        //// ssave the string in the database
+        //await clientStateHandler.SetState(Id, FriendId, state);
     }
 
     private async Task SendMessage(string message)
     {
-        // encrypt the message
-        if (encryptionClient.TryEncrypt(message, out EncryptedDataModel encryptedData))
+        MessageModel rawMessage = new()
         {
-            // serialize the message
-            string serializedEncryptedData = Newtonsoft.Json.JsonConvert.SerializeObject(encryptedData);
+            SenderId = Id,
+            Message = message,
+            TimeSent = DateTime.UtcNow
+        };
+        await messageHandler.SendMessage(Id, FriendId, rawMessage);
+        //// encrypt the message
+        //if (encryptionClient.TryEncrypt(message, out EncryptedDataModel encryptedData))
+        //{
+        //    // serialize the message
+        //    string serializedEncryptedData = Newtonsoft.Json.JsonConvert.SerializeObject(encryptedData);
 
-            // send message over the wire
+        //    // send message over the wire
 
-            MessageModel rawMessage = new()
-            {
-                SenderId = Id,
-                Message = serializedEncryptedData,
-                TimeSent = DateTime.UtcNow
-            };
+        //    MessageModel rawMessage = new()
+        //    {
+        //        SenderId = Id,
+        //        Message = serializedEncryptedData,
+        //        TimeSent = DateTime.UtcNow
+        //    };
 
-            await messageHandler.SendMessage(Id, FriendId, rawMessage);
+        //    await messageHandler.SendMessage(Id, FriendId, rawMessage);
 
-            await SaveEncryptionState();
-        }
-        else
-        {
-            logger.LogError("Failed to encrypt message for {Id} to {FriendId}", Id, FriendId);
-        }
+        //    await SaveEncryptionState();
+        //}
+        //else
+        //{
+        //    logger.LogError("Failed to encrypt message for {Id} to {FriendId}", Id, FriendId);
+        //}
     }
 
     private async Task ReceiveMessage(IMessageModel rawMessage)
     {
         try
         {
-            EncryptedDataModel deserializedEncryptedMessage = Newtonsoft.Json.JsonConvert.DeserializeObject<EncryptedDataModel>(rawMessage.Message);
-            if (encryptionClient.TryDecrypt(deserializedEncryptedMessage, out string decryptedString))
+            // check to see if the last message was from the other person, if it is combin this message with that one to avoid screen spamming
+            if (Messages.Count >= 1 && Messages[0].DisplayName == Friend.DisplayName)
             {
-                // check to see if the last message was from the other person, if it is combin this message with that one to avoid screen spamming
-                if (Messages.Count >= 1 && Messages[0].DisplayName == Friend.DisplayName)
-                {
-                    Messages[0].Message += $"<br>{decryptedString}";
-                }
-                else
-                {
-                    Messages.Insert(
-                        0,
-                        new()
-                        {
-                            DisplayName = Friend.DisplayName,
-                            ShowSpinner = false,
-                            Message = decryptedString,
-                            ShowCheck = false,
-                            TimeSent = rawMessage.TimeSent,
-                            UniqueIdentifier = Friend.UniqueIdentifier,
-                            AvatarIsFriends = true
-                        }
-                    );
-                }
-                await SaveEncryptionState();
+                Messages[0].Message += $"<br>{rawMessage.Message}";
             }
+            else
+            {
+                Messages.Insert(
+                    0,
+                    new()
+                    {
+                        DisplayName = Friend.DisplayName,
+                        ShowSpinner = false,
+                        Message = rawMessage.Message,
+                        ShowCheck = false,
+                        TimeSent = rawMessage.TimeSent,
+                        UniqueIdentifier = Friend.UniqueIdentifier,
+                        AvatarIsFriends = true
+                    }
+                );
+            }
+            //EncryptedDataModel deserializedEncryptedMessage = Newtonsoft.Json.JsonConvert.DeserializeObject<EncryptedDataModel>(rawMessage.Message);
+            //if (encryptionClient.TryDecrypt(deserializedEncryptedMessage, out string decryptedString))
+            //{
+            //    // check to see if the last message was from the other person, if it is combin this message with that one to avoid screen spamming
+            //    if (Messages.Count >= 1 && Messages[0].DisplayName == Friend.DisplayName)
+            //    {
+            //        Messages[0].Message += $"<br>{decryptedString}";
+            //    }
+            //    else
+            //    {
+            //        Messages.Insert(
+            //            0,
+            //            new()
+            //            {
+            //                DisplayName = Friend.DisplayName,
+            //                ShowSpinner = false,
+            //                Message = decryptedString,
+            //                ShowCheck = false,
+            //                TimeSent = rawMessage.TimeSent,
+            //                UniqueIdentifier = Friend.UniqueIdentifier,
+            //                AvatarIsFriends = true
+            //            }
+            //        );
+            //    }
+            //    await SaveEncryptionState();
+            //}
         }
         catch (Exception e)
         {

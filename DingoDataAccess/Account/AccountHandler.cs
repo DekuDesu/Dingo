@@ -9,16 +9,14 @@ using DingoAuthentication.Encryption;
 
 namespace DingoDataAccess.Account
 {
-    public class AccountHandler<TKeyBundleType, TSignedKeyModelType> : IAccountHandler
-        where TSignedKeyModelType : ISignedKeyModel, new()
-        where TKeyBundleType : IKeyBundleModel<TSignedKeyModelType>, new()
+    public class AccountHandler : IAccountHandler
     {
         private readonly ISqlDataAccess db;
         private readonly ISqlDataAccess messagesDb;
-        private readonly ILogger<AccountHandler<TKeyBundleType, TSignedKeyModelType>> logger;
+        private readonly ILogger<AccountHandler> logger;
         private readonly IDisplayNameHandler displayNameHandler;
-        private readonly IDiffieHellmanHandler diffieHellmanHandler;
-        private readonly IKeyAndBundleHandler<TKeyBundleType, TSignedKeyModelType> bundleHandler;
+        //private readonly IDiffieHellmanHandler diffieHellmanHandler;
+        //private readonly IKeyAndBundleHandler<TKeyBundleType, TSignedKeyModelType> bundleHandler;
         private const string ConnectionStringName = "DingoUsersConnection";
         private const string MessagesConnectionStringName = "DingoMessagesConnection";
 
@@ -28,7 +26,7 @@ namespace DingoDataAccess.Account
         private const string MessagesCreateNewUserProcedure = "CreateUser";
         private const string MessagesDeleteUserProcedure = "DeleteUser";
 
-        public AccountHandler(ISqlDataAccess _db, ISqlDataAccess _messagesDb, ILogger<AccountHandler<TKeyBundleType, TSignedKeyModelType>> _logger, IDisplayNameHandler _displayNameHandler, IDiffieHellmanHandler diffieHellmanHandler, IKeyAndBundleHandler<TKeyBundleType, TSignedKeyModelType> bundleHandler)
+        public AccountHandler(ISqlDataAccess _db, ISqlDataAccess _messagesDb, ILogger<AccountHandler> _logger, IDisplayNameHandler _displayNameHandler)
         {
             db = _db;
             messagesDb = _messagesDb;
@@ -36,9 +34,9 @@ namespace DingoDataAccess.Account
             displayNameHandler = _displayNameHandler;
 
             // this is used to create the identity keys for this account
-            this.diffieHellmanHandler = diffieHellmanHandler;
+            //this.diffieHellmanHandler = diffieHellmanHandler;
             // this is used to save the keys created
-            this.bundleHandler = bundleHandler;
+            //this.bundleHandler = bundleHandler;
 
             db.ConnectionStringName = ConnectionStringName;
             messagesDb.ConnectionStringName = MessagesConnectionStringName;
@@ -81,10 +79,10 @@ namespace DingoDataAccess.Account
             await messagesDb.ExecuteVoidProcedure(MessagesCreateNewUserProcedure, new { Id });
 
             // create identity keys
-            var (PublicKey, PrivateKey) = diffieHellmanHandler.GenerateKeys();
+            //var (PublicKey, PrivateKey) = diffieHellmanHandler.GenerateKeys();
 
             // store the keys
-            await bundleHandler.SetKeys(Id, PublicKey, PrivateKey);
+            //await bundleHandler.SetKeys(Id, PublicKey, PrivateKey);
 
             logger.LogInformation("Finished creating new user {DisplayName}#{result} {Id}", DisplayName, result, Id);
 

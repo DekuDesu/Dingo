@@ -9,8 +9,7 @@
 @inject IFriendListHandler friendListHandler
 @inject IDisplayNameHandler displayNameHander
 @inject IValidator<DisplayNameModel> searchValidator
-
-@inject IBundleProcessor bundleProcessor
+@*@inject IBundleProcessor bundleProcessor*@
 
 <EditForm Context="User" @bind-model="displayName" OnValidSubmit="@Submit">
     <div class="">
@@ -156,8 +155,8 @@
                 return;
             }
 
-            // create and store our encryption budle so we can create a shared secret with that person
-            await bundleProcessor.SendBundle(Id, foundId);
+            //// create and store our encryption budle so we can create a shared secret with that person
+            //await bundleProcessor.SendBundle(Id, foundId);
 
             await friendHandler.SendRequest(Id, foundId);
 

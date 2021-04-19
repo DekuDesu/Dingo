@@ -26,7 +26,7 @@ namespace Dingo.Areas.Identity
                 services.AddTransient<ISqlDataAccess, SqlDataAccess>();
                 services.AddTransient<IFullDisplayNameModel, FullDisplayNameModel>();
                 services.AddSingleton(typeof(IDisplayNameHandler), typeof(DisplayNameHandler<FullDisplayNameModel>));
-                services.AddSingleton(typeof(IAccountHandler), typeof(AccountHandler<KeyBundleModel<SignedKeyModel>, SignedKeyModel>));
+                services.AddSingleton(typeof(IAccountHandler), typeof(AccountHandler));
                 services.AddTransient<IStatusHandler, StatusHandler>();
             });
         }
